@@ -2,9 +2,9 @@
 
 ## What This Is
 
-Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude unrestricted shell access on a remote machine via `execve` and `execve_pipeline` tools. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice. It can also persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
+Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude command-line access on a remote machine via `execve`, `execve_pipeline`, `write_file`, and `patch_file` tools. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice. It can also persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
 
-It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). Clients connect over HTTP at `/mcp`, authenticate via OAuth (or a static bearer token), and can then run arbitrary bash commands on the host.
+It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). Clients connect over HTTP at `/mcp`, authenticate via OAuth (or a static bearer token), and can then run programs on the host. Commands run via `execve` (no shell) with a policy that blocks accidentally destructive operations.
 
 ## How It Works
 
