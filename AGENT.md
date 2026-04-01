@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude unrestricted shell access on a remote machine via an `exec` tool. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice.
+Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude unrestricted shell access on a remote machine via an `exec` tool. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice. It can also persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
 
 It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). Clients connect over HTTP at `/mcp`, authenticate via OAuth (or a static bearer token), and can then run arbitrary bash commands on the host.
 
@@ -40,6 +40,10 @@ Railway auto-sets `RAILWAY_PUBLIC_DOMAIN`. For other hosts (Fly.io, etc.), the u
 ### 3. Connect to Claude.ai
 
 Tell the user to go to **Claude.ai → Settings → Connectors → Add custom connector** and set the MCP URL to `https://<their-railway-domain>.up.railway.app/mcp`. This is a manual UI step.
+
+### 4. Persist data (optional)
+
+By default Railway spins up a fresh container on every deploy. To persist data (installed CLIs, config files, etc.) tell the user to add a [Volume](https://docs.railway.com/volumes) in their Railway service settings and mount it to a path like `/data`.
 
 ## Tech Stack
 

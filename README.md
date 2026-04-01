@@ -1,6 +1,6 @@
 # 🏤 Backoffice
 
-Give any AI assistant with MCP support a backoffice that allows it to use CLI's and persist data that it otherwise wouldn't be able to.
+Give any AI assistant with MCP support a backoffice that allows it to use CLI's, persist, and process data that it otherwise wouldn't be able to.
 
 ## Why
 
