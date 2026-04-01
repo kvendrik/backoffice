@@ -1,4 +1,4 @@
-# 🛖 Outpost
+# 🗼 Outpost
 
 #### Give any AI assistant a remote shell to use any CLI without restrictions
 
