@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.mcp-token
+
+# Build / output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Auto-generated MCP bearer secret (when MCP_TOKEN unset)
+.mcp-token
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE (keep .vscode/settings.json tracked; ignore local overrides)
+.idea/
+*.swp
+*.swo
+
+# Logs / debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun.lockb.debug
+
+# Coverage
+coverage/
+
+# Optional local tooling
+.vercel
+.netlify
