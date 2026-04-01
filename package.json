@@ -1,5 +1,5 @@
 {
-  "name": "outpost",
+  "name": "backoffice",
   "version": "0.0.1",
   "scripts": {
     "start": "bun run src/index.ts",

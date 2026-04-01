@@ -94,15 +94,14 @@ function renderConsentPage(params: URLSearchParams, error?: string): Response {
     )
     .join("\n          ");
 
-  const errorBlock =
-    error !== undefined ? `\n      <p class="error">${escapeHtml(error)}</p>` : "";
+  const errorBlock = error !== undefined ? `\n      <p class="error">${escapeHtml(error)}</p>` : "";
 
   const html = `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Outpost — Authorize</title>
+    <title>Backoffice — Authorize</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html {
@@ -134,8 +133,8 @@ function renderConsentPage(params: URLSearchParams, error?: string): Response {
   </head>
   <body>
     <main>
-      <div class="icon">🗼</div>
-      <h1>Outpost</h1>
+      <div class="icon">🏤</div>
+      <h1>Backoffice</h1>
       <p>Enter the passphrase to authorize access</p>${errorBlock}
       <form method="POST">
           ${hiddenFields}
@@ -242,9 +241,7 @@ export function createOAuthRuntime(options: {
 
   async function handleAuthorize(req: Request): Promise<Response> {
     const rawParams =
-      req.method === "GET"
-        ? new URL(req.url).searchParams
-        : new URLSearchParams(await req.text());
+      req.method === "GET" ? new URL(req.url).searchParams : new URLSearchParams(await req.text());
 
     if (authPassphrase !== undefined) {
       if (req.method === "GET") {

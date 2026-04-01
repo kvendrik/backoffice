@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Outpost is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude unrestricted shell access on a remote machine via an `exec` tool. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Outpost.
+Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude unrestricted shell access on a remote machine via an `exec` tool. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice.
 
 It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). Clients connect over HTTP at `/mcp`, authenticate via OAuth (or a static bearer token), and can then run arbitrary bash commands on the host.
 
@@ -15,7 +15,7 @@ It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). C
 
 ## Setup for the User
 
-When a user asks you to set up Outpost, follow these steps:
+When a user asks you to set up Backoffice, follow these steps:
 
 ### 1. Install dependencies
 
