@@ -81,6 +81,7 @@ bun run format:check # Check formatting
 | `PORT`                  | No       | Server port (default: `3000`)                                                                                 |
 | `PUBLIC_BASE_URL`       | No       | Public origin for OAuth metadata. Set when not on Railway.                                                    |
 | `RAILWAY_PUBLIC_DOMAIN` | No       | Auto-set by Railway. Used as public origin if `PUBLIC_BASE_URL` is unset.                                     |
+| `AUTH_PASSPHRASE`       | No       | Passphrase required on the OAuth authorize screen. Auto-generated on startup if not set. Printed to stdout.   |
 | `USE_MCP_TOKEN_AUTH`    | No       | Set to `1` to use static bearer token auth instead of OAuth. Useful for local dev or non-browser MCP clients. |
 | `MCP_TOKEN`             | No       | Static bearer token (only used when `USE_MCP_TOKEN_AUTH=1`). Auto-generated to `.mcp-token` if unset.         |
 

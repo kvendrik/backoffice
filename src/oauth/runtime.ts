@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import * as z from "zod";
 import { verifyChallenge } from "pkce-challenge";
 import {
@@ -69,6 +69,89 @@ function createErrorRedirect(
   return errorUrl.href;
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function verifyPassphrase(presented: string, expected: string): boolean {
+  const a = Buffer.from(presented, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+function renderConsentPage(params: URLSearchParams, error?: string): Response {
+  const hiddenFields = Array.from(params.entries())
+    .filter(([key]) => key !== "passphrase")
+    .map(
+      ([key, value]) =>
+        `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}" />`,
+    )
+    .join("\n          ");
+
+  const errorBlock =
+    error !== undefined ? `\n      <p class="error">${escapeHtml(error)}</p>` : "";
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Outpost — Authorize</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html {
+        font-size: 20px; line-height: 1.5;
+        font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+        color: #bababa; background-color: #1a1a1a;
+      }
+      main { max-width: 360px; margin: 0 auto; padding-top: 20vh; text-align: center; }
+      .icon { font-size: 3rem; }
+      h1 { font-family: monospace; margin-bottom: 0.25em; }
+      p { margin-bottom: 1.25em; font-size: 0.9rem; }
+      form { display: flex; flex-direction: column; gap: 0.75em; }
+      input[type="password"] {
+        font-size: 0.85rem; padding: 0.6em 0.75em;
+        border: 1px solid #333; border-radius: 0.25em;
+        background: #2b2b2b; color: #bababa;
+        text-align: center; outline: none;
+      }
+      input[type="password"]:focus { border-color: #555; }
+      button {
+        font-size: 0.85rem; padding: 0.6em 0.75em;
+        border: none; border-radius: 0.25em;
+        background: #bababa; color: #1a1a1a;
+        cursor: pointer; font-family: inherit;
+      }
+      button:hover { background: #ddd; }
+      .error { color: #e57373; font-size: 0.8rem; margin-top: -0.5em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="icon">🗼</div>
+      <h1>Outpost</h1>
+      <p>Enter the passphrase to authorize access</p>${errorBlock}
+      <form method="POST">
+          ${hiddenFields}
+          <input type="password" name="passphrase" placeholder="Passphrase" autofocus required />
+          <button type="submit">Authorize</button>
+      </form>
+    </main>
+  </body>
+</html>`;
+
+  return new Response(html, {
+    status: error !== undefined ? 403 : 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
+}
+
 const ClientAuthorizationParamsSchema = z.object({
   client_id: z.string(),
   redirect_uri: z
@@ -119,8 +202,9 @@ export function createOAuthRuntime(options: {
   issuerUrl: URL;
   mcpServerUrl: URL;
   resourceName?: string;
+  authPassphrase?: string;
 }): OAuthRuntime {
-  const { issuerUrl, mcpServerUrl, resourceName = "filesystem-mcp" } = options;
+  const { issuerUrl, mcpServerUrl, resourceName = "filesystem-mcp", authPassphrase } = options;
 
   const validateResource = (resource: URL | undefined): boolean => {
     if (resource === undefined) {
@@ -157,13 +241,26 @@ export function createOAuthRuntime(options: {
   const asMetadataPath = "/.well-known/oauth-authorization-server";
 
   async function handleAuthorize(req: Request): Promise<Response> {
+    const rawParams =
+      req.method === "GET"
+        ? new URL(req.url).searchParams
+        : new URLSearchParams(await req.text());
+
+    if (authPassphrase !== undefined) {
+      if (req.method === "GET") {
+        return renderConsentPage(rawParams);
+      }
+      const submitted = rawParams.get("passphrase") ?? "";
+      if (!verifyPassphrase(submitted, authPassphrase)) {
+        const oauthParams = new URLSearchParams(rawParams);
+        oauthParams.delete("passphrase");
+        return renderConsentPage(oauthParams, "Invalid passphrase");
+      }
+    }
+
+    const phase1Raw = Object.fromEntries(rawParams.entries());
     let resolvedRedirect: string;
     let client: NonNullable<Awaited<ReturnType<typeof provider.clientsStore.getClient>>>;
-
-    const phase1Raw =
-      req.method === "GET"
-        ? Object.fromEntries(new URL(req.url).searchParams.entries())
-        : Object.fromEntries(new URLSearchParams(await req.text()).entries());
 
     try {
       const r1 = ClientAuthorizationParamsSchema.safeParse(phase1Raw);

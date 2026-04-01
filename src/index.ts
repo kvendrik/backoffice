@@ -70,10 +70,19 @@ function parseIssuerUrl(): URL {
 
 const issuerUrl = parseIssuerUrl();
 const mcpServerUrl = new URL("/mcp", issuerUrl);
+function loadOrCreateAuthPassphrase(): string {
+  const env = process.env["AUTH_PASSPHRASE"]?.trim();
+  if (env !== undefined && env !== "") return env;
+  return nanoid(12);
+}
+
+const authPassphrase = USE_MCP_TOKEN_AUTH ? undefined : loadOrCreateAuthPassphrase();
+
 const oauth = createOAuthRuntime({
   issuerUrl,
   mcpServerUrl,
   resourceName: "filesystem-mcp",
+  ...(authPassphrase !== undefined ? { authPassphrase } : {}),
 });
 
 interface SessionEntry {
@@ -235,4 +244,8 @@ if (USE_MCP_TOKEN_AUTH) {
   console.log(
     `**Claude.ai**: Settings → Connectors → Add custom connector. MCP URL: ${mcpServerUrl.href}. Claude will automatically authenticate and refresh tokens.`,
   );
+  if (authPassphrase !== undefined) {
+    console.log("");
+    console.log(`Auth passphrase: ${authPassphrase}`);
+  }
 }

@@ -36,10 +36,8 @@ railway up
 
 ### 3. Connect
 
-#### `Claude.ai`
-
-1. Go to **Settings → Connectors → Add custom connector**
-2. Set the MCP URL to your deployed Railway app:`https://your-app.up.railway.app/mcp`
+1. Add `https://your-app.up.railway.app/mcp` as a MCP.
+2. You'll be prompted for a passphrase which you can find in the Railway logs. Outpost logs it on startup.
 
 ### 4. Use it
 
@@ -59,3 +57,4 @@ Outpost gives the AI unrestricted shell access on the machine it's deployed to. 
 - **Deploy on an isolated, ephemeral machine.** Services like Railway spin up fresh containers on every deploy. Treat the machine as disposable.
 - **Don't store secrets on the machine.** Pass credentials through environment variables and use your hosting provider's secret management.
 - **OAuth protects access.** Only clients that complete the OAuth flow can call the `exec` tool. There's no open endpoint.
+- **Passphrase-protected authorization.** The OAuth consent screen requires a passphrase before issuing tokens. A passphrase is auto-generated on startup and printed to stdout. Set `AUTH_PASSPHRASE` to use your own.
