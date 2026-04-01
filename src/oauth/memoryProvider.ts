@@ -95,7 +95,9 @@ export class BunMemoryOAuthProvider {
     client: OAuthClientInformationFull,
     params: CodeEntry["params"],
   ): string {
-    if (!client.redirect_uris.some((registered) => redirectUriMatches(params.redirectUri, registered))) {
+    if (
+      !client.redirect_uris.some((registered) => redirectUriMatches(params.redirectUri, registered))
+    ) {
       throw new InvalidRequestError("Unregistered redirect_uri");
     }
     const code = randomUUID();

@@ -42,11 +42,7 @@ function withOAuthCors(res: Response): Response {
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 }
 
-function jsonOAuth(
-  data: unknown,
-  status: number,
-  headers?: Record<string, string>,
-): Response {
+function jsonOAuth(data: unknown, status: number, headers?: Record<string, string>): Response {
   const h = new Headers({ "Content-Type": "application/json", "Cache-Control": "no-store" });
   if (headers !== undefined) {
     for (const [k, v] of Object.entries(headers)) {
@@ -56,7 +52,11 @@ function jsonOAuth(
   return withOAuthCors(new Response(JSON.stringify(data), { status, headers: h }));
 }
 
-function createErrorRedirect(redirectUri: string, error: OAuthError, state: string | undefined): string {
+function createErrorRedirect(
+  redirectUri: string,
+  error: OAuthError,
+  state: string | undefined,
+): string {
   const errorUrl = new URL(redirectUri);
   errorUrl.searchParams.set("error", error.errorCode);
   errorUrl.searchParams.set("error_description", error.message);
@@ -177,7 +177,9 @@ export function createOAuthRuntime(options: {
       }
       client = c;
       if (redirect_uri !== undefined) {
-        if (!client.redirect_uris.some((registered) => redirectUriMatches(redirect_uri, registered))) {
+        if (
+          !client.redirect_uris.some((registered) => redirectUriMatches(redirect_uri, registered))
+        ) {
           throw new InvalidRequestError("Unregistered redirect_uri");
         }
         resolvedRedirect = redirect_uri;
@@ -241,7 +243,9 @@ export function createOAuthRuntime(options: {
     }
   }
 
-  async function authenticateClientFromForm(body: URLSearchParams): Promise<OAuthClientInformationFull> {
+  async function authenticateClientFromForm(
+    body: URLSearchParams,
+  ): Promise<OAuthClientInformationFull> {
     const raw = Object.fromEntries(body.entries());
     const result = ClientAuthenticatedFormSchema.safeParse(raw);
     if (!result.success) {
@@ -273,7 +277,9 @@ export function createOAuthRuntime(options: {
     const ct = req.headers.get("content-type") ?? "";
     if (!ct.includes("application/x-www-form-urlencoded")) {
       return jsonOAuth(
-        new InvalidRequestError("Content-Type must be application/x-www-form-urlencoded").toResponseObject(),
+        new InvalidRequestError(
+          "Content-Type must be application/x-www-form-urlencoded",
+        ).toResponseObject(),
         400,
       );
     }
@@ -340,7 +346,8 @@ export function createOAuthRuntime(options: {
       const clientSecret = isPublicClient ? undefined : randomBytes(32).toString("hex");
       const clientIdIssuedAt = Math.floor(Date.now() / 1000);
       const clientSecretExpirySeconds = 30 * 24 * 60 * 60;
-      const secretExpiryTime = clientSecretExpirySeconds > 0 ? clientIdIssuedAt + clientSecretExpirySeconds : 0;
+      const secretExpiryTime =
+        clientSecretExpirySeconds > 0 ? clientIdIssuedAt + clientSecretExpirySeconds : 0;
       const clientSecretExpiresAt = isPublicClient ? undefined : secretExpiryTime;
       const newClient: OAuthClientInformationFull = {
         ...clientMetadata,
@@ -409,14 +416,21 @@ export function createOAuthRuntime(options: {
     return header;
   }
 
-  async function verifyMcpBearer(req: Request): Promise<{ authInfo: AuthInfo } | { response: Response }> {
+  async function verifyMcpBearer(
+    req: Request,
+  ): Promise<{ authInfo: AuthInfo } | { response: Response }> {
     try {
       const authHeader = req.headers.get("authorization");
       if (!authHeader) {
         throw new InvalidTokenError("Missing Authorization header");
       }
       const [type, token] = authHeader.split(" ");
-      if (type === undefined || token === undefined || type.toLowerCase() !== "bearer" || token === "") {
+      if (
+        type === undefined ||
+        token === undefined ||
+        type.toLowerCase() !== "bearer" ||
+        token === ""
+      ) {
         throw new InvalidTokenError("Invalid Authorization header format, expected 'Bearer TOKEN'");
       }
       const verified = await provider.verifyAccessToken(token);
@@ -455,7 +469,9 @@ export function createOAuthRuntime(options: {
       if (error instanceof OAuthError) {
         return { response: jsonOAuth(error.toResponseObject(), 400) };
       }
-      return { response: jsonOAuth(new ServerError("Internal Server Error").toResponseObject(), 500) };
+      return {
+        response: jsonOAuth(new ServerError("Internal Server Error").toResponseObject(), 500),
+      };
     }
   }
 

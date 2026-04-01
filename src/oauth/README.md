@@ -25,12 +25,12 @@ Client                              Server
 
 ## Files
 
-| File | Purpose |
-|---|---|
-| `runtime.ts` | OAuth route handling, CORS, metadata endpoints, token verification |
-| `memoryProvider.ts` | In-memory client store and token/code state |
-| `eventStore.ts` | In-memory `EventStore` for resumable Streamable HTTP |
-| `index.ts` | Barrel re-exports |
+| File                | Purpose                                                            |
+| ------------------- | ------------------------------------------------------------------ |
+| `runtime.ts`        | OAuth route handling, CORS, metadata endpoints, token verification |
+| `memoryProvider.ts` | In-memory client store and token/code state                        |
+| `eventStore.ts`     | In-memory `EventStore` for resumable Streamable HTTP               |
+| `index.ts`          | Barrel re-exports                                                  |
 
 ## Limitations
 

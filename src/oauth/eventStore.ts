@@ -13,7 +13,7 @@ export class InMemoryEventStore implements EventStore {
 
   private getStreamIdFromEventId(eventId: string): string {
     const parts = eventId.split("_");
-    return parts.length > 0 ? parts[0] ?? "" : "";
+    return parts.length > 0 ? (parts[0] ?? "") : "";
   }
 
   storeEvent(streamId: string, message: JSONRPCMessage): Promise<string> {
