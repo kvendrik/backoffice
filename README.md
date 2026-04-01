@@ -1,6 +1,6 @@
 # 🗼 Outpost
 
-#### Give any AI assistant a remote shell to use any CLI without restrictions
+#### Give your AI assistant a remote shell
 
 ## Why
 
