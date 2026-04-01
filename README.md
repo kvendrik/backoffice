@@ -37,7 +37,7 @@ railway up
 ### 3. Connect
 
 1. Add `https://your-app.up.railway.app/mcp` as a MCP.
-2. You'll be prompted for a passphrase which you can find in the Railway logs. Outpost logs it on startup.
+2. You'll be prompted for a passphrase which you can find in the startup logs. Outpost logs it on startup.
 
 ### 4. Use it
 
