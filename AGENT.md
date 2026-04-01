@@ -2,15 +2,15 @@
 
 ## What This Is
 
-Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude unrestricted shell access on a remote machine via an `exec` tool. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice. It can also persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
+Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude unrestricted shell access on a remote machine via `execve` and `execve_pipeline` tools. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice. It can also persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
 
 It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). Clients connect over HTTP at `/mcp`, authenticate via OAuth (or a static bearer token), and can then run arbitrary bash commands on the host.
 
 ## How It Works
 
 1. An MCP client (e.g. Claude.ai) connects to `/mcp` and authenticates
-2. The server creates an MCP session with a single tool: `exec`
-3. `exec` runs the given string through `/bin/bash -c` and returns stdout, stderr, and the exit code
+2. The server registers MCP tools: `execve`, `execve_pipeline`, `write_file`, and `patch_file`
+3. `execve` runs a program directly (no shell) with an argument vector and returns stdout, stderr, and the exit code. `execve_pipeline` does the same but pipes stdout of each stage into stdin of the next. Most filesystem work uses `execve` (e.g. `cat`, `ls`, `mv`, `rm`). `write_file` covers creating and overwriting text without a shell; `patch_file` applies structured line patches.
 4. OAuth is fully in-memory — tokens rotate on every deploy, no database needed
 
 ## Setup for the User
@@ -58,7 +58,7 @@ By default Railway spins up a fresh container on every deploy. To persist data (
 src/
   index.ts          # Entry point — HTTP server, routing, session management
   mcp.ts            # MCP server factory, CORS helpers
-  tools.ts          # MCP tool definitions (exec)
+  tools/            # MCP tool modules (exec, fs, patch)
   oauth/
     index.ts        # Re-exports
     runtime.ts      # OAuth endpoint handlers (authorize, token, register)

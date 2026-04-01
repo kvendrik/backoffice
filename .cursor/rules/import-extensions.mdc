@@ -1,0 +1,21 @@
+---
+description: Do not use file extensions in TypeScript imports
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+# No file extensions in imports
+
+Do not add `.js`, `.ts`, or other extensions to relative import paths. Bun's module resolution handles this automatically.
+
+```typescript
+// BAD
+import { foo } from "./utils.js";
+import { bar } from "./helpers.ts";
+
+// GOOD
+import { foo } from "./utils";
+import { bar } from "./helpers";
+```
+
+Exception: keep `.js` extensions on imports from external packages that require them (e.g. `@modelcontextprotocol/sdk`), since those are part of the package's published export map.

@@ -6,7 +6,7 @@ Give any AI assistant with MCP support a backoffice that allows it to use CLI's,
 
 AI assistants like [Claude](https://claude.ai/) can use MCPs to access external services, but the library of available MCPs is limited. If a service doesn't have an MCP, you're stuck searching for third-party providers.
 
-This is what Backoffice aims to solve. It allows Claude (or any other AI assistant app) to use the command line on a remote machine (through a `exec` tool it exposes) so that it can just use CLIs to access whatever services you usually access through the CLI, without the security restrictions Claude's own bash access has.
+This is what Backoffice aims to solve. It allows Claude (or any other AI assistant app) to use the command line on a remote machine so that it can just use CLIs to access whatever services you usually access through the CLI.
 
 It also means it can do things like persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
 
@@ -43,7 +43,7 @@ railway up
 
 ### 4. Use it
 
-Start a new conversation on Claude.ai. Claude will now have access to a `exec` tool that executes commands on your remote machine.
+Start a new conversation on Claude.ai. Claude will now have access to a set of tools that execute commands on your remote machine.
 
 ## Authentication
 
@@ -60,4 +60,9 @@ By default Railway spins up a fresh container on every deploy. To persist data (
 
 ## Security
 
-Backoffice gives the AI unrestricted shell access on the machine it's deployed to. This is by design — it's what makes it flexible enough to use any CLI. It does also mean that Backoffice is vulnerable in case the LLM does something you don't intend to do. Do keep this in mind.
+Backoffice gives the AI broad access to the machine it's deployed to. To reduce the risk of accidental damage, it applies a few guardrails:
+
+- **No shell.** Commands run via `execve` (direct process execution), not `bash -c`. This eliminates shell injection and ensures every command is a structured program + argument list.
+- **Dangerous command policy.** A blocklist prevents common mistakes: shell interpreters (which would bypass the execve design), privilege escalation (`sudo`), destructive disk operations (`dd`, `shred`), raw network tools (`nc`), and others. Some commands like `rm`, `git`, and `curl` are allowed but restricted to safe flag combinations.
+
+These are **guardrails, not a sandbox.** They prevent the LLM from accidentally doing something destructive during normal use. They do not protect against a determined or compromised model — an LLM could still write a script to disk and execute it, for example. The real security boundary is the infrastructure: deploy on an isolated, ephemeral machine like Railway, so that the blast radius of anything unexpected is limited.
