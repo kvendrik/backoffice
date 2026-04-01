@@ -10,11 +10,7 @@ export function register(server: McpServer): void {
       description:
         'Apply a line-based patch to a single file. Uses the "*** Begin Patch" format with one "*** Add File" or "*** Update File" section. The file path inside the patch must be absolute.',
       inputSchema: {
-        patch: z
-          .string()
-          .describe(
-            'Patch string in "*** Begin Patch" format for a single file.',
-          ),
+        patch: z.string().describe('Patch string in "*** Begin Patch" format for a single file.'),
       },
     },
     async ({ patch }) => {
@@ -49,9 +45,7 @@ interface ParsedPatch {
 function parsePatch(patchText: string): ParsedPatch {
   const lines = patchText.replace(/\r\n/g, "\n").split("\n");
   if (lines.length < 3) {
-    throw new Error(
-      "Patch must contain at least a begin line, header, and end line.",
-    );
+    throw new Error("Patch must contain at least a begin line, header, and end line.");
   }
 
   const beginLine = lines[0]?.trim();
@@ -73,9 +67,7 @@ function parsePatch(patchText: string): ParsedPatch {
     operation = "update";
     filePath = headerLine.slice(updatePrefix.length).trim();
   } else {
-    throw new Error(
-      'Second line must be "*** Add File: <path>" or "*** Update File: <path>".',
-    );
+    throw new Error('Second line must be "*** Add File: <path>" or "*** Update File: <path>".');
   }
 
   if (filePath.length === 0) {
@@ -93,11 +85,7 @@ function parsePatch(patchText: string): ParsedPatch {
 async function applyAdd(filePath: string, hunkLines: string[]): Promise<void> {
   const newLines: string[] = [];
   for (const rawLine of hunkLines) {
-    if (
-      rawLine.length === 0 ||
-      rawLine.startsWith("@@") ||
-      rawLine === "*** End of File"
-    ) {
+    if (rawLine.length === 0 || rawLine.startsWith("@@") || rawLine === "*** End of File") {
       continue;
     }
     if (rawLine.startsWith("+")) {
@@ -110,20 +98,15 @@ async function applyAdd(filePath: string, hunkLines: string[]): Promise<void> {
   await writeFile(resolved, newLines.join("\n"), "utf8");
 }
 
-async function applyUpdate(
-  filePath: string,
-  hunkLines: string[],
-): Promise<void> {
+async function applyUpdate(filePath: string, hunkLines: string[]): Promise<void> {
   const resolved = resolve(filePath);
-  const originalText = await readFile(resolved, "utf8").catch(
-    (err: unknown) => {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code === "ENOENT") {
-        throw new Error(`Cannot update non-existent file: ${resolved}`);
-      }
-      throw err;
-    },
-  );
+  const originalText = await readFile(resolved, "utf8").catch((err: unknown) => {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      throw new Error(`Cannot update non-existent file: ${resolved}`);
+    }
+    throw err;
+  });
 
   const originalLines = originalText.replace(/\r\n/g, "\n").split("\n");
   const newLines: string[] = [];
@@ -188,9 +171,7 @@ async function applyPatch(patchText: string): Promise<string> {
   const parsed = parsePatch(patchText);
 
   if (!parsed.filePath.startsWith("/")) {
-    throw new Error(
-      `Patch file path must be absolute. Got: "${parsed.filePath}"`,
-    );
+    throw new Error(`Patch file path must be absolute. Got: "${parsed.filePath}"`);
   }
 
   if (parsed.operation === "update") {

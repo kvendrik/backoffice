@@ -1,21 +1,43 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod";
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+interface Session {
+  cwd: string;
+  env: Record<string, string>;
+}
+
 export function register(server: McpServer): void {
+  const session: Session = { cwd: process.cwd(), env: {} };
   server.registerTool(
     "execve",
     {
       description:
-        "Executes a program directly (no shell). The program is resolved via PATH and called with the given argv.",
+        "Executes a program directly (no shell). The program is resolved via PATH and called with the given argv. Working directory and environment persist across calls. No glob expansion — use find/ls to match patterns instead of wildcards in args.",
       inputSchema: {
         program: z.string().describe("Executable name or path"),
         args: z.array(z.string()).default([]).describe("Argument vector"),
+        cwd: z.string().optional().describe("Working directory. Persists for subsequent calls."),
+        env: z
+          .record(z.string(), z.string())
+          .optional()
+          .describe("Environment variables to set. Merged into session env and persists."),
+        timeout_ms: z
+          .number()
+          .int()
+          .positive()
+          .default(DEFAULT_TIMEOUT_MS)
+          .describe("Timeout in milliseconds. Defaults to 30000 (30s). Increase for long-running commands."),
       },
     },
-    async ({ program, args }) => {
-      const { stdout, stderr, code } = await runExec(program, args);
-      return formatResult(stdout, stderr, code);
+    async ({ program, args, cwd, env, timeout_ms }) => {
+      const err = applySessionUpdates(session, cwd, env);
+      if (err !== null) return formatError(err);
+      const { stdout, stderr, code } = await runExec(program, args, session, timeout_ms);
+      return formatResult(stdout, stderr, code, session);
     },
   );
 
@@ -23,7 +45,7 @@ export function register(server: McpServer): void {
     "execve_pipeline",
     {
       description:
-        "Executes a pipeline of programs, piping stdout of each into stdin of the next. Each stage uses execve semantics (no shell).",
+        "Executes a pipeline of programs, piping stdout of each into stdin of the next. Each stage uses execve semantics (no shell). Working directory and environment persist across calls.",
       inputSchema: {
         commands: z
           .array(
@@ -34,18 +56,53 @@ export function register(server: McpServer): void {
           )
           .min(1)
           .describe("Ordered list of commands to pipe together"),
+        cwd: z.string().optional().describe("Working directory. Persists for subsequent calls."),
+        env: z
+          .record(z.string(), z.string())
+          .optional()
+          .describe("Environment variables to set. Merged into session env and persists."),
+        timeout_ms: z
+          .number()
+          .int()
+          .positive()
+          .default(DEFAULT_TIMEOUT_MS)
+          .describe("Timeout in milliseconds. Defaults to 30000 (30s). Increase for long-running commands."),
       },
     },
-    async ({ commands }) => {
-      const { stdout, stderr, code } = await runPipeline(commands);
-      return formatResult(stdout, stderr, code);
+    async ({ commands, cwd, env, timeout_ms }) => {
+      const err = applySessionUpdates(session, cwd, env);
+      if (err !== null) return formatError(err);
+      const { stdout, stderr, code } = await runPipeline(commands, session, timeout_ms);
+      return formatResult(stdout, stderr, code, session);
     },
   );
 }
 
-function formatResult(stdout: string, stderr: string, code: number | null) {
+function applySessionUpdates(
+  session: Session,
+  cwd: string | undefined,
+  env: Record<string, string> | undefined,
+): string | null {
+  if (cwd !== undefined) {
+    if (!existsSync(cwd) || !statSync(cwd).isDirectory()) {
+      return `cwd does not exist or is not a directory: ${cwd}`;
+    }
+    session.cwd = cwd;
+  }
+  if (env !== undefined) Object.assign(session.env, env);
+  return null;
+}
+
+function formatError(message: string) {
+  return {
+    content: [{ type: "text" as const, text: message }],
+    isError: true,
+  };
+}
+
+function formatResult(stdout: string, stderr: string, code: number | null, session: Session) {
   const exitLabel = code === null ? "null" : String(code);
-  const lines = [`exit code: ${exitLabel}`];
+  const lines = [`cwd: ${session.cwd}`, `exit code: ${exitLabel}`];
   if (stdout.length > 0) lines.push("", "stdout:", stdout);
   if (stderr.length > 0) lines.push("", "stderr:", stderr);
   return {
@@ -54,17 +111,29 @@ function formatResult(stdout: string, stderr: string, code: number | null) {
   };
 }
 
+function sessionEnv(session: Session): NodeJS.ProcessEnv {
+  return { ...process.env, ...session.env };
+}
+
 function runExec(
   program: string,
   args: string[],
+  session: Session,
+  timeoutMs: number,
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
   return new Promise((resolve) => {
     const child = spawn(program, args, {
       stdio: ["ignore", "pipe", "pipe"],
-      env: process.env,
+      cwd: session.cwd,
+      env: sessionEnv(session),
     });
     let stdout = "";
     let stderr = "";
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, timeoutMs);
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
@@ -74,9 +143,14 @@ function runExec(
       stderr += chunk;
     });
     child.on("close", (code) => {
-      resolve({ stdout, stderr, code });
+      clearTimeout(timer);
+      if (timedOut) {
+        stderr = `process timed out after ${String(timeoutMs)}ms (increase timeout_ms for long-running commands)\n${stderr}`;
+      }
+      resolve({ stdout, stderr, code: timedOut ? 1 : code });
     });
     child.on("error", (err) => {
+      clearTimeout(timer);
       resolve({ stdout, stderr: `${stderr}\n${String(err)}`, code: 1 });
     });
   });
@@ -84,18 +158,28 @@ function runExec(
 
 function runPipeline(
   commands: { program: string; args: string[] }[],
+  session: Session,
+  timeoutMs: number,
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
   const first = commands[0];
   if (first !== undefined && commands.length === 1)
-    return runExec(first.program, first.args);
+    return runExec(first.program, first.args, session, timeoutMs);
 
+  const env = sessionEnv(session);
   return new Promise((resolve) => {
     const children: ChildProcess[] = commands.map((cmd, i) =>
       spawn(cmd.program, cmd.args, {
         stdio: [i === 0 ? "ignore" : "pipe", "pipe", "pipe"],
-        env: process.env,
+        cwd: session.cwd,
+        env,
       }),
     );
+
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      for (const child of children) child.kill("SIGKILL");
+    }, timeoutMs);
 
     for (let i = 0; i < children.length - 1; i++) {
       const cur = children[i];
@@ -130,7 +214,12 @@ function runPipeline(
 
     const onDone = () => {
       remaining--;
-      if (remaining === 0) resolve({ stdout, stderr, code: exitCode });
+      if (remaining > 0) return;
+      clearTimeout(timer);
+      if (timedOut) {
+        stderr = `pipeline timed out after ${String(timeoutMs)}ms (increase timeout_ms for long-running commands)\n${stderr}`;
+      }
+      resolve({ stdout, stderr, code: timedOut ? 1 : exitCode });
     };
 
     for (const child of children) {
