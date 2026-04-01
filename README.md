@@ -1,6 +1,6 @@
 # 🛖 Outpost
 
-#### Remote shell access for AI assistants
+#### Give any AI assistant a remote shell to use any CLI without restrictions
 
 ## Why
 
@@ -31,7 +31,7 @@ railway up
 
 ### 3. Use it
 
-Start a new conversation on Claude.ai. Claude will now have access to a `run_bash` tool that executes commands on your remote machine.
+Start a new conversation on Claude.ai. Claude will now have access to a `exec` tool that executes commands on your remote machine.
 
 ## Authentication
 
