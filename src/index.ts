@@ -181,6 +181,8 @@ async function handleMcpWithOAuth(req: Request): Promise<Response> {
   );
 }
 
+const tokenSessions = new Map<string, SessionEntry>();
+
 async function handleMcpWithStaticToken(req: Request): Promise<Response> {
   if (!bearerMatchesStatic(req, mcpToken)) {
     return withCors(
@@ -190,10 +192,74 @@ async function handleMcpWithStaticToken(req: Request): Promise<Response> {
       }),
     );
   }
-  const transport = new WebStandardStreamableHTTPServerTransport();
-  const mcp = createMcpServer();
-  await mcp.connect(transport);
-  return withCors(await transport.handleRequest(req));
+
+  const sessionId = req.headers.get("mcp-session-id");
+  const rawBody = req.method === "POST" ? await req.text() : "";
+  let parsedBody: unknown;
+  if (rawBody === "") {
+    parsedBody = undefined;
+  } else {
+    try {
+      parsedBody = JSON.parse(rawBody) as unknown;
+    } catch {
+      parsedBody = undefined;
+    }
+  }
+
+  const replay = (body: string): Request => {
+    const init: RequestInit = { method: req.method, headers: req.headers };
+    if (body !== "") {
+      init.body = body;
+    }
+    return new Request(req.url, init);
+  };
+
+  if (sessionId !== null && sessionId !== "") {
+    const entry = tokenSessions.get(sessionId);
+    if (entry !== undefined) {
+      return withCors(await entry.transport.handleRequest(replay(rawBody), { parsedBody }));
+    }
+  }
+
+  if (
+    (sessionId === null || sessionId === "") &&
+    req.method === "POST" &&
+    parsedBody !== undefined &&
+    bodyHasInitialize(parsedBody)
+  ) {
+    const server = createMcpServer();
+    const transport = new WebStandardStreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+      onsessioninitialized: (sid) => {
+        tokenSessions.set(sid, { transport, server });
+      },
+      onsessionclosed: (sid) => {
+        tokenSessions.delete(sid);
+      },
+    });
+    await server.connect(transport);
+    transport.onclose = () => {
+      const sid = transport.sessionId;
+      if (sid !== undefined) {
+        tokenSessions.delete(sid);
+      }
+    };
+    return withCors(await transport.handleRequest(replay(rawBody), { parsedBody }));
+  }
+
+  return withCors(
+    new Response(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        error: {
+          code: -32000,
+          message: "Bad Request: No valid session ID provided",
+        },
+        id: null,
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ),
+  );
 }
 
 Bun.serve({
