@@ -12,7 +12,7 @@ A simple example of this is [Strava](https://github.com/kvendrik/strava) access.
 
 ## Quick Start
 
-> 🤖 Quickest setup is to ask your coding agent to read the [`AGENT.md`](/AGENT.md).
+> 🤖 Quickest setup is to ask your coding agent to read the [`AGENT.md`](/AGENT.md):
 >
 > ```
 > agent "Read this: https://kvendrik.com/outpost/AGENT.md"
