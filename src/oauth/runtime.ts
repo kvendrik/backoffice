@@ -357,7 +357,7 @@ export function createOAuthRuntime(options: {
       if (client_secret === undefined || client_secret === "") {
         throw new InvalidClientError("Client secret is required");
       }
-      if (c.client_secret !== client_secret) {
+      if (!verifyPassphrase(client_secret, c.client_secret)) {
         throw new InvalidClientError("Invalid client_secret");
       }
       if (
