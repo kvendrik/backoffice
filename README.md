@@ -12,7 +12,15 @@ A simple example of this is [Strava](https://github.com/kvendrik/strava) access.
 
 ## Quick Start
 
-### 1. Deploy to [Railway](https://railway.com/)
+> 🤖 Quickest setup is to ask your coding agent to read this README and set it up for you.
+
+### 1. Clone
+
+```bash
+git clone git@github.com:kvendrik/outpost.git
+```
+
+### 2. Deploy to [Railway](https://railway.com/)
 
 > Or any other remote machines service like [Fly.io](https://fly.io/). On Railway however this works out of the box — the server reads `RAILWAY_PUBLIC_DOMAIN` automatically. For other hosts, set `PUBLIC_BASE_URL` to your public origin.
 
@@ -22,14 +30,14 @@ railway login
 railway up
 ```
 
-### 2. Connect
+### 3. Connect
 
 #### `Claude.ai`
 
 1. Go to **Settings → Connectors → Add custom connector**
 2. Set the MCP URL to your deployed Railway app:`https://your-app.up.railway.app/mcp`
 
-### 3. Use it
+### 4. Use it
 
 Start a new conversation on Claude.ai. Claude will now have access to a `exec` tool that executes commands on your remote machine.
 
