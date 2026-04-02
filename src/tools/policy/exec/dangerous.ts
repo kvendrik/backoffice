@@ -15,6 +15,11 @@ const ALWAYS_BLOCKED: DangerousCommand[] = [
     binaries: ["bash", "sh", "zsh", "dash", "ksh", "csh", "tcsh", "fish", "env"],
     reason: "shell interpreters are not allowed (bypasses execve policy)",
   },
+  // Environment inspection – prevents leaking persisted secrets
+  {
+    binaries: ["printenv"],
+    reason: "environment inspection is not allowed (secrets are stored in env vars)",
+  },
   // Privilege escalation
   {
     binaries: ["sudo", "doas", "su"],

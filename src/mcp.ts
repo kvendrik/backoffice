@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { name, version } from "../package.json" with { type: "json" };
 import { create as createTools } from "./tools";
+
+const instructions = readFileSync(new URL("INSTRUCTIONS.md", import.meta.url), "utf8").trim();
 
 export const mcpCorsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -25,10 +28,7 @@ export function withCors(response: Response): Response {
 export function createMcpServer(): McpServer {
   const server = new McpServer(
     { name, version },
-    {
-      instructions:
-        "Backoffice MCP: tools run on a remote Linux machine. Always start by calling note_read to recall information saved by previous conversations (e.g. installed CLIs, useful paths, environment details). Save anything worth remembering for next time with note_write.",
-    },
+    { instructions },
   );
   createTools(server);
   return server;

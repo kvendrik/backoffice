@@ -1,7 +1,8 @@
 import { realpathSync } from "node:fs";
-import { normalize } from "node:path";
+import { normalize, resolve } from "node:path";
 import type { PolicyVerdict, ToolCallContext } from "../index";
 import { DANGEROUS_COMMANDS } from "./dangerous";
+import { ENV_PATH } from "../../env";
 
 const ALLOW: PolicyVerdict = { allow: true, reason: null };
 
@@ -52,7 +53,21 @@ function targetsTopLevelPath(args: string[]): string | null {
   return null;
 }
 
-function checkCommand(program: string, args: string[]): PolicyVerdict {
+function targetsEnvFile(args: string[], cwd?: string): boolean {
+  return args.some((arg) => {
+    if (arg.startsWith("-")) return false;
+    const abs = arg.startsWith("/") ? normalize(arg) : normalize(resolve(cwd ?? "/", arg));
+    return abs === ENV_PATH;
+  });
+}
+
+function checkCommand(program: string, args: string[], cwd?: string): PolicyVerdict {
+  if (targetsEnvFile(args, cwd)) {
+    return deny(
+      `access to the env secrets file is not allowed (got: ${program} ${args.join(" ")})`,
+    );
+  }
+
   if (resolvesBinary(program, ["rm"]) && hasRecursiveRmFlag(args)) {
     const broad = targetsTopLevelPath(args);
     if (broad !== null) {
@@ -75,10 +90,12 @@ function checkCommand(program: string, args: string[]): PolicyVerdict {
 }
 
 export function beforeCall(ctx: ToolCallContext): PolicyVerdict {
+  const cwd = ctx.args["cwd"] as string | undefined;
+
   if (ctx.toolName === "execve") {
     const program = ctx.args["program"] as string;
     const args = (ctx.args["args"] ?? []) as string[];
-    return checkCommand(program, args);
+    return checkCommand(program, args, cwd);
   }
 
   if (ctx.toolName === "execve_pipeline") {
@@ -87,8 +104,16 @@ export function beforeCall(ctx: ToolCallContext): PolicyVerdict {
       args: string[];
     }[];
     for (const cmd of commands) {
-      const verdict = checkCommand(cmd.program, cmd.args);
+      const verdict = checkCommand(cmd.program, cmd.args, cwd);
       if (!verdict.allow) return verdict;
+    }
+  }
+
+  if (ctx.toolName === "write_file") {
+    const path = ctx.args["path"] as string;
+    const abs = path.startsWith("/") ? normalize(path) : normalize(resolve(cwd ?? "/", path));
+    if (abs === ENV_PATH) {
+      return deny("writing to the env secrets file is not allowed — use env_set instead");
     }
   }
 

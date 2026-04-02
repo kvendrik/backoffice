@@ -4,7 +4,7 @@ import { policy, type ToolCallContext } from "./policy";
 import { register as registerExec } from "./exec";
 import { register as registerFs } from "./fs";
 import { register as registerPatch } from "./patch";
-import { register as registerNote } from "./note";
+import { register as registerEnv } from "./env";
 
 export type { Policy, ToolCallContext } from "./policy";
 
@@ -13,7 +13,7 @@ export function create(server: McpServer): void {
   registerExec(server);
   registerFs(server);
   registerPatch(server);
-  registerNote(server);
+  registerEnv(server);
 }
 
 function denied(reason: string): CallToolResult {

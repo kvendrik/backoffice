@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod";
+import { getAll as getPersistedEnv } from "./env";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_OUTPUT_BYTES = 1_048_576; // 1 MB
@@ -144,7 +145,7 @@ function formatResult(stdout: string, stderr: string, code: number | null, sessi
 }
 
 function sessionEnv(session: Session): NodeJS.ProcessEnv {
-  return { ...process.env, ...session.env };
+  return { ...process.env, ...getPersistedEnv(), ...session.env };
 }
 
 function cappedCollector(maxBytes: number) {
