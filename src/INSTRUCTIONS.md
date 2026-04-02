@@ -15,3 +15,7 @@ Proactively save what you learn so future conversations don't start from scratch
 - **Installation instructions** — Backoffice clears its file system between restarts. If you install anything (CLIs, packages, runtimes, etc.), save the installation steps to memory so they can be re-run in a future conversation.
 
 Don't wait to be asked — if you learned it, save it.
+
+## Persisting data
+
+Backoffice clears its file system between restarts. To persist data use `memory_write`, `env_set`, or write files to `/data` using `execve`.
