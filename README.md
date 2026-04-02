@@ -1,6 +1,11 @@
 # 🏤 Backoffice
 
-Give any AI assistant with MCP support a backoffice that allows it to use CLI's, persist, and process data that it otherwise wouldn't be able to.
+Backoffice gives your AI assistant — Claude.ai, ChatGPT, or any other — its own Linux machine that keeps working even when you're not in a conversation.
+
+- Use any CLI — no MCPs needed.
+- Run cron jobs — schedule tasks between conversations.
+- Persist data — files, notes, and state survive across sessions.
+- Store credentials securely — API keys live on the machine, not in the chat.
 
 ## Why
 
