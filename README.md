@@ -11,9 +11,7 @@ Backoffice gives your AI assistant — Claude.ai, ChatGPT, or any other — its 
 
 AI assistants like Claude and ChatGPT can use MCPs to access external services, but the library of available MCPs is limited. If a service doesn't have an MCP, you're stuck searching for third-party providers.
 
-This is what Backoffice aims to solve. It allows Claude (or any other AI assistant app) to use the command line on a remote machine so that it can just use CLIs to access whatever services you usually access through the CLI.
-
-It also means it can do things like persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
+This is what Backoffice aims to solve. It gives Claude, ChatGPT, or any other AI assistant app, a remote Linux machine so that it has a command line it can use without any restrictions.
 
 > A simple example of something Backoffice has been useful for is [Strava](https://github.com/kvendrik/strava) access. Strava has no official MCP but I have a CLI for it that I use all the time. Instead of going to a 3rd party MCP provider I just use Backoffice within Claude and tell it to install and use the Strava CLI within Backoffice.
 
