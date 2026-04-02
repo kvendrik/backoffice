@@ -61,6 +61,19 @@ The OAuth consent screen requires a passphrase before issuing tokens. A passphra
 
 By default Railway spins up a fresh container on every deploy. To persist data (installed CLIs, config files, etc.) add a [Volume](https://docs.railway.com/volumes) in your Railway service settings and mount it to a path like `/data`. Anything written there will survive deploys and restarts. See [Railway's Volumes docs](https://docs.railway.com/volumes) for details.
 
+## Tools
+
+Backoffice exposes the following tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `execve` | Run any program directly (no shell). Working directory and environment persist across calls. This is the primary tool — it gives the AI access to every CLI on the machine. |
+| `execve_pipeline` | Pipe multiple programs together (`grep` into `wc`, etc.) using the same execve semantics. Needed because there's no shell to write `\|` in. |
+| `write_file` | Write text to a file, creating parent directories as needed. Exists as a dedicated tool because `execve` uses stdin-less `execve` and can't easily stream content into a file. |
+| `patch_file` | Apply a structured line-based patch to a file. Safer than a full overwrite for small edits to large files. |
+| `note_read` | Read a persistent note file. The AI calls this at the start of every conversation to recall what it learned previously (installed CLIs, paths, credentials locations, etc.). |
+| `note_write` | Overwrite the persistent note file. The AI uses this to save context that should survive across conversations. |
+
 ## Security
 
 Backoffice gives the AI broad access to the machine it's deployed to. To reduce the risk of accidental damage, it applies a few guardrails:

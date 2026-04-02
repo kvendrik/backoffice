@@ -27,7 +27,7 @@ export function createMcpServer(): McpServer {
     { name, version },
     {
       instructions:
-        "Filesystem MCP: tools run on the server host. Use OAuth via Claude.ai connectors.",
+        "Backoffice MCP: tools run on a remote Linux machine. Always start by calling note_read to recall information saved by previous conversations (e.g. installed CLIs, useful paths, environment details). Save anything worth remembering for next time with note_write.",
     },
   );
   createTools(server);
