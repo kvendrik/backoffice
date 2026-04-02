@@ -85,3 +85,5 @@ Doing this is best practise and it’s a pretty good system to prevent the LLM f
 ## Persisting Data
 
 By default Railway spins up a fresh container on every deploy. To persist data (installed CLIs, config files, etc.) add a [Volume](https://docs.railway.com/volumes) in your Railway service settings and mount it to a path like `/data`. Anything written there will survive deploys and restarts. See [Railway's Volumes docs](https://docs.railway.com/volumes) for details.
+
+To persist installed CLIs etc between deploys, add them to the [Dockerfile](/Dockerfile).
