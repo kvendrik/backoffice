@@ -2,15 +2,15 @@
 
 ## What This Is
 
-Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude command-line access on a remote machine via `execve`, `execve_pipeline`, `write_file`, `patch_file`, `env_set`, and `env_delete` tools. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice. It can also persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
+Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude command-line access on a remote machine via `execve`, `execve_pipeline`, `write_file`, `patch_file`, `env_set`, `env_delete`, `memory_read`, `memory_write`, and `get_instructions` tools. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice. It can also persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
 
 It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). Clients connect over HTTP at `/mcp`, authenticate via OAuth (or a static bearer token), and can then run programs on the host. Commands run via `execve` (no shell) with a policy that blocks accidentally destructive operations.
 
 ## How It Works
 
 1. An MCP client (e.g. Claude.ai) connects to `/mcp` and authenticates
-2. The server registers MCP tools: `execve`, `execve_pipeline`, `write_file`, `patch_file`, `env_set`, and `env_delete`
-3. `execve` runs a program directly (no shell) with an argument vector and returns stdout, stderr, and the exit code. `execve_pipeline` does the same but pipes stdout of each stage into stdin of the next. Most filesystem work uses `execve` (e.g. `cat`, `ls`, `mv`, `rm`). `write_file` covers creating and overwriting text without a shell; `patch_file` applies structured line patches. `env_set`/`env_delete` persist environment variables (credentials, API keys) that are automatically injected into every `execve` call. The AI also uses the filesystem for persistent memory (`/data/MEMORY.md`).
+2. The server registers MCP tools: `execve`, `execve_pipeline`, `write_file`, `patch_file`, `env_set`, `env_delete`, `memory_read`, `memory_write`, and `get_instructions`
+3. `execve` runs a program directly (no shell) with an argument vector and returns stdout, stderr, and the exit code. `execve_pipeline` does the same but pipes stdout of each stage into stdin of the next. Most filesystem work uses `execve` (e.g. `cat`, `ls`, `mv`, `rm`). `write_file` covers creating and overwriting text without a shell; `patch_file` applies structured line patches. `env_set`/`env_delete` persist environment variables (credentials, API keys) that are automatically injected into every `execve` call. `memory_read`/`memory_write` give the AI persistent memory across conversations (`/data/MEMORY.md`). `get_instructions` returns the full system instructions for the MCP server.
 4. OAuth is fully in-memory — tokens rotate on every deploy, no database needed
 
 ## Setup for the User
@@ -59,7 +59,7 @@ src/
   index.ts          # Entry point — HTTP server, routing, session management
   mcp.ts            # MCP server factory, CORS helpers
   INSTRUCTIONS.md   # MCP instructions sent to the AI on connect
-  tools/            # MCP tool modules (exec, fs, patch, env)
+  tools/            # MCP tool modules (exec, fs, patch, env, memory, instructions)
   oauth/
     index.ts        # Re-exports
     runtime.ts      # OAuth endpoint handlers (authorize, token, register)

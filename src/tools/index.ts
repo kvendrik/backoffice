@@ -5,6 +5,8 @@ import { register as registerExec } from "./exec";
 import { register as registerFs } from "./fs";
 import { register as registerPatch } from "./patch";
 import { register as registerEnv } from "./env";
+import { register as registerMemory } from "./memory";
+import { register as registerInstructions } from "./instructions";
 
 export type { Policy, ToolCallContext } from "./policy";
 
@@ -14,6 +16,8 @@ export function create(server: McpServer): void {
   registerFs(server);
   registerPatch(server);
   registerEnv(server);
+  registerMemory(server);
+  registerInstructions(server);
 }
 
 function denied(reason: string): CallToolResult {
