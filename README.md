@@ -17,10 +17,15 @@ This is what Backoffice aims to solve. It gives Claude, ChatGPT, or any other AI
 
 ## Quick Start
 
-1. [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/me5Zii?referralCode=Du7Dll&utm_medium=integration&utm_source=template&utm_campaign=generic)
-2. Add `https://your-app.up.railway.app/mcp` as an MCP at your favorite AI assistant.
-3. Your assistant will prompt you for a password, this in a random string that can be found in the Railway service logs.
-4. Start a new conversation with your assistant. It will now have access to the remote machine through the Backoffice MCP.
+First:
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/me5Zii?referralCode=Du7Dll&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
+Then:
+
+1. Add `https://your-app.up.railway.app/mcp` as an MCP at your favorite AI assistant.
+2. Your assistant will prompt you for a password, this in a random string that can be found in the Railway service logs.
+3. Start a new conversation with your assistant. It will now have access to the remote machine through the Backoffice MCP.
 
 The [one-click install](https://railway.com/deploy/me5Zii?referralCode=Du7Dll&utm_medium=integration&utm_source=template&utm_campaign=generic) sets up this repo as a Railway app, will mount a volume on `/data` to persist data (see "Persisting Data" below), and sets up a health check for `GET /version` so that Railway monitors the health of the service using that endpoint.
 
