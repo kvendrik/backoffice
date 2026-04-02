@@ -81,7 +81,7 @@ Backoffice exposes the following tools:
 `execve` requires the LLM to call a single command + arguments at a time which allows us to analyze what it's trying to do a lot better than if we would allow shell redirects and pipes. When it tries to run a command we:
 
 1. **Run it through the [policy system](/src/tools/policy/index.ts#L18-L25)**, which analyzes what goes in and comes out of a tool call.
-2. **Resolve the binary**. For `execve` we first resolve the binary. This is so that we know what command the LLM is _really_ trying to run (resolves symlinks and aliases to their actual binaries).
+2. **[Resolve the binary](/src/tools//policy/exec/index.ts#L11-L21)**. For `execve` we first resolve the binary. This is so that we know what command the LLM is _really_ trying to run (resolves symlinks and aliases to their actual binaries).
 3. **Check for [dangerous commands](/src/tools/policy/exec/dangerous.ts)**. We check is the command the LLM is trying to run is potentially dangerous.
 
 Doing this is best practise and it’s a pretty good system to prevent the LLM from accidentally doing something destructive during normal use. **Please do note that this does not protect against a determined or compromised model** — an LLM could still write a script to disk and execute it, for example. The real security boundary is the infrastructure: **deploy on an isolated, ephemeral machine like Railway, so that the blast radius of anything unexpected is limited.**
