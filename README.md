@@ -57,10 +57,6 @@ The OAuth consent screen requires a passphrase before issuing tokens. A passphra
 - **In-memory state.** Tokens are lost on restart, so they're naturally rotated on every deploy. Apps like Claude.ai re-authenticate automatically.
 - **Short-lived tokens.** Access tokens expire every hour. Apps like Claude.ai refresh them automatically.
 
-## Persisting Data
-
-By default Railway spins up a fresh container on every deploy. To persist data (installed CLIs, config files, etc.) add a [Volume](https://docs.railway.com/volumes) in your Railway service settings and mount it to a path like `/data`. Anything written there will survive deploys and restarts. See [Railway's Volumes docs](https://docs.railway.com/volumes) for details.
-
 ## Tools
 
 Backoffice exposes the following tools:
@@ -85,3 +81,7 @@ Backoffice exposes the following tools:
 3. **Check for [dangerous commands](/src/tools/policy/exec/dangerous.ts)**. We check is the command the LLM is trying to run is potentially dangerous.
 
 Doing this is best practise and it’s a pretty good system to prevent the LLM from accidentally doing something destructive during normal use. **Please do note that this does not protect against a determined or compromised model** — an LLM could still write a script to disk and execute it, for example. The real security boundary is the infrastructure: **deploy on an isolated, ephemeral machine like Railway, so that the blast radius of anything unexpected is limited.**
+
+## Persisting Data
+
+By default Railway spins up a fresh container on every deploy. To persist data (installed CLIs, config files, etc.) add a [Volume](https://docs.railway.com/volumes) in your Railway service settings and mount it to a path like `/data`. Anything written there will survive deploys and restarts. See [Railway's Volumes docs](https://docs.railway.com/volumes) for details.
