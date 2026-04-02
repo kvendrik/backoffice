@@ -1,7 +1,7 @@
 export interface DangerousCommand {
   /** Binary names that match (checked via `Bun.which` resolved path ending). */
   binaries: string[];
-  /** When set, only deny when these flag patterns appear in args. */
+  /** When set, only deny when these flag patterns appear in args (exact or prefix match). */
   flags?: string[];
   reason: string;
 }
@@ -52,11 +52,6 @@ const ALWAYS_BLOCKED: DangerousCommand[] = [
  */
 const FLAG_BLOCKED: DangerousCommand[] = [
   {
-    binaries: ["rm"],
-    flags: ["-"],
-    reason: "rm with flags is not allowed",
-  },
-  {
     binaries: ["curl", "wget"],
     flags: ["--upload-file", "-T", "--data", "-d", "-X", "--request", "-F", "--form"],
     reason: "upload/POST requests are not allowed",
@@ -65,11 +60,6 @@ const FLAG_BLOCKED: DangerousCommand[] = [
     binaries: ["git"],
     flags: ["--force", "-f", "--hard"],
     reason: "destructive git operations are not allowed",
-  },
-  {
-    binaries: ["ssh", "scp", "rsync"],
-    flags: ["-"],
-    reason: "remote access with flags is not allowed",
   },
 ];
 

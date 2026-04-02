@@ -36,5 +36,4 @@ Client                              Server
 
 - All state (clients, codes, tokens) is **in-memory** — restarting the process clears everything.
 - Single-instance only; not suited for multi-replica deployments.
-- No refresh token support.
-- Tokens expire after 1 hour.
+- Access tokens expire after 1 hour. Refresh tokens are supported — apps like Claude.ai use them to rotate automatically.

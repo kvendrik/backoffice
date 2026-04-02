@@ -63,8 +63,8 @@ Backoffice exposes the following tools:
 
 | Tool              | Purpose                                                                                                                                                                      |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `execve`          | Run any program directly (no shell). Working directory and environment persist across calls. This is the primary tool — it gives the AI access to every CLI on the machine.  |
-| `execve_pipeline` | Pipe multiple programs together (`grep` into `wc`, etc.) using the same execve semantics. Needed because there's no shell to write `\|` in.                                  |
+| `execve`          | Run any program directly (no shell). Working directory and environment persist across calls. This is the primary tool — it gives the AI access to every CLI on the machine. Output is capped at 1 MB per stream by default (configurable via `max_output_bytes`). |
+| `execve_pipeline` | Pipe multiple programs together (`grep` into `wc`, etc.) using the same execve semantics. Needed because there's no shell to write `\|` in. Same output cap as `execve`.    |
 | `write_file`      | Write text to a file, creating parent directories as needed. Exists as a dedicated tool because shell redirects and piping to stdin are unavailable in `execve`              |
 | `patch_file`      | Apply a structured line-based patch to a file. Safer than a full overwrite for small edits to large files.                                                                   |
 | `note_read`       | Read a persistent note file. The AI calls this at the start of every conversation to recall what it learned previously (installed CLIs, paths, credentials locations, etc.). |
@@ -79,6 +79,7 @@ Backoffice exposes the following tools:
 1. **Run it through the [policy system](/src/tools/policy/index.ts#L18-L25)**, which analyzes what goes in and comes out of a tool call.
 2. **[Resolve the binary](/src/tools/policy/exec/index.ts#L11-L21)**. For `execve` we first resolve the binary. This is so that we know what command the LLM is _really_ trying to run (resolves symlinks and aliases to their actual binaries).
 3. **Check for [dangerous commands](/src/tools/policy/exec/dangerous.ts)**. We check if the command the LLM is trying to run is potentially dangerous.
+4. **[Path-based `rm` guard](/src/tools/policy/exec/index.ts#L28-L53)**. `rm -r` is allowed, but blocked when any target is `/` or a direct child of `/` (e.g. `/usr`, `/data`). Deeper paths like `/data/old-project` are fine.
 
 Doing this is best practise and it’s a pretty good system to prevent the LLM from accidentally doing something destructive during normal use. **Please do note that this does not protect against a determined or compromised model** — an LLM could still write a script to disk and execute it, for example. The real security boundary is the infrastructure: **deploy on an isolated, ephemeral machine like Railway, so that the blast radius of anything unexpected is limited.**
 

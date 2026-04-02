@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_MAX_OUTPUT_BYTES = 1_048_576; // 1 MB
 
 interface Session {
   cwd: string;
@@ -33,12 +34,26 @@ export function register(server: McpServer): void {
           .describe(
             "Timeout in milliseconds. Defaults to 30000 (30s). Increase for long-running commands.",
           ),
+        max_output_bytes: z
+          .number()
+          .int()
+          .positive()
+          .default(DEFAULT_MAX_OUTPUT_BYTES)
+          .describe(
+            "Max bytes captured per stream (stdout/stderr). Defaults to 1048576 (1 MB). Increase for commands that produce large output.",
+          ),
       },
     },
-    async ({ program, args, cwd, env, timeout_ms }) => {
+    async ({ program, args, cwd, env, timeout_ms, max_output_bytes }) => {
       const err = applySessionUpdates(session, cwd, env);
       if (err !== null) return formatError(err);
-      const { stdout, stderr, code } = await runExec(program, args, session, timeout_ms);
+      const { stdout, stderr, code } = await runExec(
+        program,
+        args,
+        session,
+        timeout_ms,
+        max_output_bytes,
+      );
       return formatResult(stdout, stderr, code, session);
     },
   );
@@ -71,12 +86,25 @@ export function register(server: McpServer): void {
           .describe(
             "Timeout in milliseconds. Defaults to 30000 (30s). Increase for long-running commands.",
           ),
+        max_output_bytes: z
+          .number()
+          .int()
+          .positive()
+          .default(DEFAULT_MAX_OUTPUT_BYTES)
+          .describe(
+            "Max bytes captured per stream (stdout/stderr). Defaults to 1048576 (1 MB). Increase for commands that produce large output.",
+          ),
       },
     },
-    async ({ commands, cwd, env, timeout_ms }) => {
+    async ({ commands, cwd, env, timeout_ms, max_output_bytes }) => {
       const err = applySessionUpdates(session, cwd, env);
       if (err !== null) return formatError(err);
-      const { stdout, stderr, code } = await runPipeline(commands, session, timeout_ms);
+      const { stdout, stderr, code } = await runPipeline(
+        commands,
+        session,
+        timeout_ms,
+        max_output_bytes,
+      );
       return formatResult(stdout, stderr, code, session);
     },
   );
@@ -119,11 +147,32 @@ function sessionEnv(session: Session): NodeJS.ProcessEnv {
   return { ...process.env, ...session.env };
 }
 
+function cappedCollector(maxBytes: number) {
+  let buf = "";
+  let bytes = 0;
+  let truncated = false;
+  const append = (chunk: string): void => {
+    if (truncated) return;
+    bytes += Buffer.byteLength(chunk, "utf8");
+    if (bytes > maxBytes) {
+      truncated = true;
+      return;
+    }
+    buf += chunk;
+  };
+  const value = (): string => {
+    if (truncated) return `${buf}\n… output truncated (exceeded ${String(maxBytes)} bytes, increase max_output_bytes) …`;
+    return buf;
+  };
+  return { append, value };
+}
+
 function runExec(
   program: string,
   args: string[],
   session: Session,
   timeoutMs: number,
+  maxOutputBytes: number,
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
   return new Promise((resolve) => {
     const child = spawn(program, args, {
@@ -131,8 +180,8 @@ function runExec(
       cwd: session.cwd,
       env: sessionEnv(session),
     });
-    let stdout = "";
-    let stderr = "";
+    const stdout = cappedCollector(maxOutputBytes);
+    const stderr = cappedCollector(maxOutputBytes);
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
@@ -141,21 +190,22 @@ function runExec(
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
-      stdout += chunk;
+      stdout.append(chunk);
     });
     child.stderr.on("data", (chunk: string) => {
-      stderr += chunk;
+      stderr.append(chunk);
     });
     child.on("close", (code) => {
       clearTimeout(timer);
+      let stderrVal = stderr.value();
       if (timedOut) {
-        stderr = `process timed out after ${String(timeoutMs)}ms (increase timeout_ms for long-running commands)\n${stderr}`;
+        stderrVal = `process timed out after ${String(timeoutMs)}ms (increase timeout_ms for long-running commands)\n${stderrVal}`;
       }
-      resolve({ stdout, stderr, code: timedOut ? 1 : code });
+      resolve({ stdout: stdout.value(), stderr: stderrVal, code: timedOut ? 1 : code });
     });
     child.on("error", (err) => {
       clearTimeout(timer);
-      resolve({ stdout, stderr: `${stderr}\n${String(err)}`, code: 1 });
+      resolve({ stdout: stdout.value(), stderr: `${stderr.value()}\n${String(err)}`, code: 1 });
     });
   });
 }
@@ -164,10 +214,11 @@ function runPipeline(
   commands: { program: string; args: string[] }[],
   session: Session,
   timeoutMs: number,
+  maxOutputBytes: number,
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
   const first = commands[0];
   if (first !== undefined && commands.length === 1)
-    return runExec(first.program, first.args, session, timeoutMs);
+    return runExec(first.program, first.args, session, timeoutMs, maxOutputBytes);
 
   const env = sessionEnv(session);
   return new Promise((resolve) => {
@@ -194,22 +245,22 @@ function runPipeline(
       if (out !== null && inp !== null) out.pipe(inp);
     }
 
-    let stdout = "";
-    let stderr = "";
+    const stdout = cappedCollector(maxOutputBytes);
+    const stderr = cappedCollector(maxOutputBytes);
     const last = children[children.length - 1];
 
     for (const child of children) {
       if (child.stderr === null) continue;
       child.stderr.setEncoding("utf8");
       child.stderr.on("data", (chunk: string) => {
-        stderr += chunk;
+        stderr.append(chunk);
       });
     }
 
     if (last !== undefined && last.stdout !== null) {
       last.stdout.setEncoding("utf8");
       last.stdout.on("data", (chunk: string) => {
-        stdout += chunk;
+        stdout.append(chunk);
       });
     }
 
@@ -220,10 +271,11 @@ function runPipeline(
       remaining--;
       if (remaining > 0) return;
       clearTimeout(timer);
+      let stderrVal = stderr.value();
       if (timedOut) {
-        stderr = `pipeline timed out after ${String(timeoutMs)}ms (increase timeout_ms for long-running commands)\n${stderr}`;
+        stderrVal = `pipeline timed out after ${String(timeoutMs)}ms (increase timeout_ms for long-running commands)\n${stderrVal}`;
       }
-      resolve({ stdout, stderr, code: timedOut ? 1 : exitCode });
+      resolve({ stdout: stdout.value(), stderr: stderrVal, code: timedOut ? 1 : exitCode });
     };
 
     for (const child of children) {
@@ -232,7 +284,7 @@ function runPipeline(
         onDone();
       });
       child.on("error", (err) => {
-        stderr += `\n${String(err)}`;
+        stderr.append(`\n${String(err)}`);
         if (child === last) exitCode = 1;
         onDone();
       });

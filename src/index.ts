@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { nanoid } from "nanoid";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { version } from "../package.json" with { type: "json" };
 import { createMcpServer, mcpCorsHeaders, withCors } from "./mcp";
 import { createOAuthRuntime, InMemoryEventStore } from "./oauth";
@@ -90,7 +91,8 @@ interface SessionEntry {
   server: ReturnType<typeof createMcpServer>;
 }
 
-const sessions = new Map<string, SessionEntry>();
+const oauthSessions = new Map<string, SessionEntry>();
+const tokenSessions = new Map<string, SessionEntry>();
 
 function bodyHasInitialize(body: unknown): boolean {
   if (body === undefined || body === null) {
@@ -102,13 +104,11 @@ function bodyHasInitialize(body: unknown): boolean {
   return isInitializeRequest(body);
 }
 
-async function handleMcpWithOAuth(req: Request): Promise<Response> {
-  const auth = await oauth.verifyMcpBearer(req);
-  if ("response" in auth) {
-    return withCors(auth.response);
-  }
-  const { authInfo } = auth;
-
+async function handleMcpSession(
+  req: Request,
+  sessions: Map<string, SessionEntry>,
+  authInfo?: AuthInfo,
+): Promise<Response> {
   const sessionId = req.headers.get("mcp-session-id");
   const rawBody = req.method === "POST" ? await req.text() : "";
   let parsedBody: unknown;
@@ -130,11 +130,12 @@ async function handleMcpWithOAuth(req: Request): Promise<Response> {
     return new Request(req.url, init);
   };
 
+  const extra = authInfo !== undefined ? { parsedBody, authInfo } : { parsedBody };
+
   if (sessionId !== null && sessionId !== "") {
     const entry = sessions.get(sessionId);
     if (entry !== undefined) {
-      const { transport } = entry;
-      return withCors(await transport.handleRequest(replay(rawBody), { parsedBody, authInfo }));
+      return withCors(await entry.transport.handleRequest(replay(rawBody), extra));
     }
   }
 
@@ -145,10 +146,10 @@ async function handleMcpWithOAuth(req: Request): Promise<Response> {
     bodyHasInitialize(parsedBody)
   ) {
     const server = createMcpServer();
-    const eventStore = new InMemoryEventStore();
+    const eventStore = authInfo !== undefined ? new InMemoryEventStore() : undefined;
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
-      eventStore,
+      ...(eventStore !== undefined ? { eventStore } : {}),
       onsessioninitialized: (sid) => {
         sessions.set(sid, { transport, server });
       },
@@ -163,7 +164,7 @@ async function handleMcpWithOAuth(req: Request): Promise<Response> {
         sessions.delete(sid);
       }
     };
-    return withCors(await transport.handleRequest(replay(rawBody), { parsedBody, authInfo }));
+    return withCors(await transport.handleRequest(replay(rawBody), extra));
   }
 
   return withCors(
@@ -181,7 +182,11 @@ async function handleMcpWithOAuth(req: Request): Promise<Response> {
   );
 }
 
-const tokenSessions = new Map<string, SessionEntry>();
+async function handleMcpWithOAuth(req: Request): Promise<Response> {
+  const auth = await oauth.verifyMcpBearer(req);
+  if ("response" in auth) return withCors(auth.response);
+  return handleMcpSession(req, oauthSessions, auth.authInfo);
+}
 
 async function handleMcpWithStaticToken(req: Request): Promise<Response> {
   if (!bearerMatchesStatic(req, mcpToken)) {
@@ -192,74 +197,7 @@ async function handleMcpWithStaticToken(req: Request): Promise<Response> {
       }),
     );
   }
-
-  const sessionId = req.headers.get("mcp-session-id");
-  const rawBody = req.method === "POST" ? await req.text() : "";
-  let parsedBody: unknown;
-  if (rawBody === "") {
-    parsedBody = undefined;
-  } else {
-    try {
-      parsedBody = JSON.parse(rawBody) as unknown;
-    } catch {
-      parsedBody = undefined;
-    }
-  }
-
-  const replay = (body: string): Request => {
-    const init: RequestInit = { method: req.method, headers: req.headers };
-    if (body !== "") {
-      init.body = body;
-    }
-    return new Request(req.url, init);
-  };
-
-  if (sessionId !== null && sessionId !== "") {
-    const entry = tokenSessions.get(sessionId);
-    if (entry !== undefined) {
-      return withCors(await entry.transport.handleRequest(replay(rawBody), { parsedBody }));
-    }
-  }
-
-  if (
-    (sessionId === null || sessionId === "") &&
-    req.method === "POST" &&
-    parsedBody !== undefined &&
-    bodyHasInitialize(parsedBody)
-  ) {
-    const server = createMcpServer();
-    const transport = new WebStandardStreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-      onsessioninitialized: (sid) => {
-        tokenSessions.set(sid, { transport, server });
-      },
-      onsessionclosed: (sid) => {
-        tokenSessions.delete(sid);
-      },
-    });
-    await server.connect(transport);
-    transport.onclose = () => {
-      const sid = transport.sessionId;
-      if (sid !== undefined) {
-        tokenSessions.delete(sid);
-      }
-    };
-    return withCors(await transport.handleRequest(replay(rawBody), { parsedBody }));
-  }
-
-  return withCors(
-    new Response(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Bad Request: No valid session ID provided",
-        },
-        id: null,
-      }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    ),
-  );
+  return handleMcpSession(req, tokenSessions);
 }
 
 Bun.serve({
