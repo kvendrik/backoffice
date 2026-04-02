@@ -146,7 +146,7 @@ async function handleMcpSession(
     parsedBody !== undefined &&
     bodyHasInitialize(parsedBody)
   ) {
-    const server = createMcpServer();
+    const server = await createMcpServer();
     const eventStore = authInfo !== undefined ? new InMemoryEventStore() : undefined;
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
