@@ -231,11 +231,17 @@ Bun.serve({
   },
 });
 
-console.log(
-  process.env["RAILWAY_PUBLIC_DOMAIN"]?.trim()
-    ? ""
-    : "⚠️ RAILWAY_PUBLIC_DOMAIN is required and not set. If this is your first deploy please deploy again. It not being set the first time is a common Railway issue.",
-);
+if (!process.env["RAILWAY_PUBLIC_DOMAIN"]?.trim() && !process.env["PUBLIC_BASE_URL"]?.trim()) {
+  console.error(`
+⚠️ Public domain (RAILWAY_PUBLIC_DOMAIN or PUBLIC_BASE_URL) is required and not set. 
+
+If you’re using Railway:
+1. If you’ve manually set PUBLIC_BASE_URL make sure it’s actually set. You won’t see this message if it is.
+2. Make sure you have a Public Networking domain set up: https://docs.railway.com/networking/public-networking
+3. If this is your first deploy please deploy again. RAILWAY_PUBLIC_DOMAIN not being set the first time is a common Railway issue. Run \`railway down && railway up\` to redeploy.
+`);
+  process.exit(1);
+}
 
 console.log(`http://0.0.0.0:${String(listenPort)} → https://${issuerUrl.host}`);
 
@@ -246,10 +252,11 @@ if (USE_MCP_TOKEN_AUTH) {
   console.log(mcpToken);
 } else {
   console.log(
-    `**Claude.ai**: Settings → Connectors → Add custom connector. MCP URL: ${mcpServerUrl.href}. Claude will automatically authenticate and refresh tokens.`,
+    `
+Claude.ai setup:
+1. Settings → Connectors → Add custom connector.
+2. MCP URL: ${mcpServerUrl.href}. 
+3. Click "Connect". Passphrase: "${/* eslint-disable @typescript-eslint/no-non-null-assertion */ authPassphrase!}".
+4. Claude will automatically authenticate and refresh tokens.`,
   );
-  if (authPassphrase !== undefined) {
-    console.log("");
-    console.log(`Auth passphrase: ${authPassphrase}`);
-  }
 }
