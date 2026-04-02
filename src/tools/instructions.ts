@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-
-const instructions = readFileSync(new URL("INSTRUCTIONS.md", import.meta.url), "utf8").trim();
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -12,7 +11,12 @@ export function register(server: McpServer): void {
       inputSchema: {},
     },
     () => ({
-      content: [{ type: "text" as const, text: instructions }],
+      content: [
+        {
+          type: "text" as const,
+          text: readFileSync(join(__dirname, "..", "INSTRUCTIONS.md"), "utf8").trim(),
+        },
+      ],
     }),
   );
 }
