@@ -11,27 +11,38 @@ Backoffice gives your AI assistant — Claude.ai, ChatGPT, or any other — its 
 
 AI assistants like Claude and ChatGPT can use MCPs to access external services, but the library of available MCPs is limited. If a service doesn't have an MCP, you're stuck searching for third-party providers.
 
-This is what Backoffice aims to solve. It gives Claude, ChatGPT, or any other AI assistant app, a remote Linux machine so that it has a command line it can use without any restrictions.
+This is what Backoffice aims to solve. It gives Claude, ChatGPT, or any other AI assistant app, a remote Linux machine so that it has a command line it can use with minimal restrictions.
 
 > A simple example of something Backoffice has been useful for is [Strava](https://github.com/kvendrik/strava) access. Strava has no official MCP but I have a CLI for it that I use all the time. Instead of going to a 3rd party MCP provider I just use Backoffice within Claude and tell it to install and use the Strava CLI within Backoffice.
 
 ## Quick Start
 
-> 🤖 Quickest setup is to ask your coding agent to read the [`AGENT.md`](/AGENT.md):
->
-> ```
-> agent "Read this: https://kvendrik.com/backoffice/AGENT.md"
-> ```
+1. [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/me5Zii?referralCode=Du7Dll&utm_medium=integration&utm_source=template&utm_campaign=generic)
+2. Add `https://your-app.up.railway.app/mcp` as an MCP at your favorite AI assistant.
+3. Your assistant will prompt you for a password, this in a random string that can be found in the Railway service logs.
+4. Start a new conversation with your assistant. It will now have access to the remote machine through the Backoffice MCP.
 
-### 1. Clone
+The [one-click install](https://railway.com/deploy/me5Zii?referralCode=Du7Dll&utm_medium=integration&utm_source=template&utm_campaign=generic) sets up this repo as a Railway app, will mount a volume on `/data` to persist data (see "Persisting Data" below), and sets up a health check for `GET /version` so that Railway monitors the health of the service using that endpoint.
+
+## Manual Setup
+
+### 🤖 Option 1: Ask your coding agent
+
+```bash
+claude "Read this: https://kvendrik.com/backoffice/AGENT.md"
+```
+
+### 🙋‍♂️🙋‍♀️ Option 2: DIY
+
+#### 1. Clone
 
 ```bash
 git clone git@github.com:kvendrik/backoffice.git
 ```
 
-### 2. Deploy to [Railway](https://railway.com/)
+#### 2. Deploy to [Railway](https://railway.com/)
 
-> Or any other remote machines service like [Fly.io](https://fly.io/). On Railway however this works out of the box — the server reads `RAILWAY_PUBLIC_DOMAIN` automatically. For other hosts, set `PUBLIC_BASE_URL` to your public origin.
+> Or any other remote-machines service like [Fly.io](https://fly.io/). On Railway however this works out of the box — the server reads `RAILWAY_PUBLIC_DOMAIN` automatically. For other hosts, set `PUBLIC_BASE_URL` to your public origin.
 
 ```bash
 brew install railway
@@ -39,12 +50,12 @@ railway login
 railway up
 ```
 
-### 3. Connect
+#### 3. Connect
 
 1. Add `https://your-app.up.railway.app/mcp` as an MCP.
 2. You'll be prompted for a passphrase which you can find in the startup logs. Backoffice logs it on startup.
 
-### 4. Use it
+#### 4. Use it
 
 Start a new conversation with your assistant. It will now have access to the remote machine through the Backoffice MCP.
 
@@ -80,7 +91,7 @@ The AI is also instructed to use the filesystem for memory and skills:
 
 `execve`, `execve_pipeline`, and `write_file` together basically replace an `exec` tool with full shell access. The reason we do this is to create more control over what commands the LLM is trying to execute.
 
-`execve` requires the LLM to call a single command + arguments at a time which allows us to analyze what it's trying to do a lot better than if we would allow shell redirects and pipes. When it tries to run a command we:
+`execve` requires the LLM to call a single command + arguments at a time which allows us to analyze what it's trying to do far more reliably than if we allowed shell redirects and pipes. When it tries to run a command we:
 
 1. **Run it through the [policy system](/src/tools/policy/index.ts)**, which analyzes what goes in and comes out of a tool call.
 2. **[Resolve the binary](/src/tools/policy/exec/index.ts)**. For `execve` we first resolve the binary. This is so that we know what command the LLM is _really_ trying to run (resolves symlinks and aliases to their actual binaries).
@@ -88,7 +99,7 @@ The AI is also instructed to use the filesystem for memory and skills:
 4. **[Filter dangerous `rm` calls](/src/tools/policy/exec/index.ts)**. `rm -r` is allowed, but blocked when any target is `/` or a direct child of `/` (e.g. `/usr`, `/data`). Deeper paths like `/data/old-project` are fine.
 5. **[Filter direct env reads](/src/tools/policy/exec/index.ts)**. Direct reads and writes of the env secrets file and `printenv`/`env` commands are blocked to prevent persisted credentials from leaking back into the conversation (_the LLM could however still write a script that reads the env and run it_).
 
-Doing this is best practise and it’s a pretty good system to prevent the LLM from accidentally doing something destructive during normal use. **Please do note that this does not protect against a determined or compromised model** — an LLM could still write a script to disk and execute it, for example. The real security boundary is the infrastructure: **deploy on an isolated, ephemeral machine like Railway, so that the blast radius of anything unexpected is limited.**
+Doing this is best practice and it’s a pretty good system to prevent the LLM from accidentally doing something destructive during normal use. **Please do note that this does not protect against a determined or compromised model** — an LLM could still write a script to disk and execute it, for example. The real security boundary is the infrastructure: **deploy on an isolated, ephemeral machine like Railway, so that the blast radius of anything unexpected is limited.**
 
 ## Persisting Data
 

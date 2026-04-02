@@ -31,7 +31,6 @@ function matchesFlags(args: string[], flags: string[]): boolean {
  * target is `/` or a direct child of `/` (e.g. `/usr`, `/data`). This
  * prevents accidentally wiping the filesystem or a major directory while
  * still allowing normal cleanup at deeper paths like `/data/old-project`.
- * Only absolute paths are checked — relative paths are left alone.
  */
 function hasRecursiveRmFlag(args: string[]): boolean {
   return args.some((arg) => {
@@ -43,11 +42,11 @@ function hasRecursiveRmFlag(args: string[]): boolean {
   });
 }
 
-function targetsTopLevelPath(args: string[]): string | null {
+function targetsTopLevelPath(args: string[], cwd?: string): string | null {
   for (const arg of args) {
     if (arg.startsWith("-")) continue;
-    if (!arg.startsWith("/")) continue;
-    const segments = normalize(arg).split("/").filter(Boolean);
+    const abs = arg.startsWith("/") ? normalize(arg) : normalize(resolve(cwd ?? "/", arg));
+    const segments = abs.split("/").filter(Boolean);
     if (segments.length <= 1) return arg;
   }
   return null;
@@ -69,7 +68,7 @@ function checkCommand(program: string, args: string[], cwd?: string): PolicyVerd
   }
 
   if (resolvesBinary(program, ["rm"]) && hasRecursiveRmFlag(args)) {
-    const broad = targetsTopLevelPath(args);
+    const broad = targetsTopLevelPath(args, cwd);
     if (broad !== null) {
       return deny(
         `recursive rm on top-level path "${broad}" is not allowed — use a more specific path (got: ${program} ${args.join(" ")})`,
