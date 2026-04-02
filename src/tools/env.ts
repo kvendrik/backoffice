@@ -58,7 +58,7 @@ export function register(server: McpServer): void {
         value: z.string().refine((v) => !v.includes("\n"), "Value must not contain newlines"),
       },
     },
-    async ({ name, value }) => {
+    ({ name, value }) => {
       try {
         const data = load();
         data[name] = value;
@@ -83,7 +83,7 @@ export function register(server: McpServer): void {
         name: z.string().describe("The environment variable name to remove"),
       },
     },
-    async ({ name }) => {
+    ({ name }) => {
       try {
         const data = load();
         if (!(name in data)) {
@@ -94,7 +94,7 @@ export function register(server: McpServer): void {
             isError: true,
           };
         }
-        delete data[name];
+        cache = Object.fromEntries(Object.entries(data).filter(([k]) => k !== name));
         save();
         return {
           content: [{ type: "text" as const, text: `Environment variable "${name}" deleted.` }],
