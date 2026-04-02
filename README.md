@@ -9,7 +9,7 @@ Backoffice gives your AI assistant — Claude.ai, ChatGPT, or any other — its 
 
 ## Why
 
-AI assistants like [Claude](https://claude.ai/) can use MCPs to access external services, but the library of available MCPs is limited. If a service doesn't have an MCP, you're stuck searching for third-party providers.
+AI assistants like Claude and ChatGPT can use MCPs to access external services, but the library of available MCPs is limited. If a service doesn't have an MCP, you're stuck searching for third-party providers.
 
 This is what Backoffice aims to solve. It allows Claude (or any other AI assistant app) to use the command line on a remote machine so that it can just use CLIs to access whatever services you usually access through the CLI.
 
