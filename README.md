@@ -86,11 +86,9 @@ Backoffice exposes the following tools:
 | `env_set`         | Persist an environment variable. Stored on disk and automatically injected into every `execve`/`execve_pipeline` call. Use for credentials and API keys — values are not returned to the conversation.                                                                                                                              |
 | `env_delete`      | Remove a persisted environment variable.                                                                                                                                                                                                                                                                                            |
 
-The AI is also instructed to use the filesystem for memory and skills:
+The AI is also instructed to use the filesystem for memory.
 
-- **`/data/MEMORY.md`** — General notes that persist across conversations (installed CLIs, useful paths, environment quirks). Read at the start of every conversation via `execve cat`, written via `write_file`.
-- **`/data/skills/INDEX.md`** — Skill index listing each skill as `<name>.md — <description>`. Read at the start of every conversation so the AI knows which skills exist without reading them all.
-- **`/data/skills/<name>.md`** — Per-tool knowledge (e.g. how to use a specific CLI). Read via `execve cat`, written via `write_file`. The AI updates `INDEX.md` whenever it creates or modifies a skill.
+> **`/data/MEMORY.md`** — Persistent notes across conversations: installed CLIs, useful paths, environment quirks, how to use specific tools/APIs/services, and user preferences. Read at the start of every conversation via `execve cat`, written via `write_file`.
 
 ## Security
 
@@ -108,6 +106,6 @@ Doing this is best practice and it’s a pretty good system to prevent the LLM f
 
 ## Persisting Data
 
-By default Railway spins up a fresh container on every deploy. To persist data add a [Volume](https://docs.railway.com/volumes) in your Railway service settings and mount it at `/data`. The AI is instructed to use `/data` for memory, skills, and credentials (via `env_set`), so this path matters. See [Railway's Volumes docs](https://docs.railway.com/volumes) for details.
+By default Railway spins up a fresh container on every deploy. To persist data add a [Volume](https://docs.railway.com/volumes) in your Railway service settings and mount it at `/data`. The AI is instructed to use `/data` for memory and credentials (via `env_set`), so this path matters. See [Railway's Volumes docs](https://docs.railway.com/volumes) for details.
 
 To persist installed CLIs etc between deploys, add them to the [Dockerfile](/Dockerfile).
