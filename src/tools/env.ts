@@ -55,7 +55,7 @@ export function register(server: McpServer): void {
         "Persist an environment variable. The value is stored on disk and automatically injected into every execve/execve_pipeline call. Use this for credentials and API keys — values are not returned to the conversation.",
       inputSchema: {
         name: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "Must be a valid env var name"),
-        value: z.string(),
+        value: z.string().refine((v) => !v.includes("\n"), "Value must not contain newlines"),
       },
     },
     async ({ name, value }) => {
