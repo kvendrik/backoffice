@@ -73,7 +73,8 @@ Backoffice exposes the following tools:
 The AI is also instructed to use the filesystem for memory and skills:
 
 - **`/data/MEMORY.md`** — General notes that persist across conversations (installed CLIs, useful paths, environment quirks). Read at the start of every conversation via `execve cat`, written via `write_file`.
-- **`/data/skills/<name>.md`** — Per-tool knowledge (e.g. how to use a specific CLI). Listed via `execve ls`, read via `execve cat`, written via `write_file`.
+- **`/data/skills/INDEX.md`** — Skill index listing each skill as `<name>.md — <description>`. Read at the start of every conversation so the AI knows which skills exist without reading them all.
+- **`/data/skills/<name>.md`** — Per-tool knowledge (e.g. how to use a specific CLI). Read via `execve cat`, written via `write_file`. The AI updates `INDEX.md` whenever it creates or modifies a skill.
 
 ## Security
 

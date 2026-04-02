@@ -10,7 +10,7 @@ It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). C
 
 1. An MCP client (e.g. Claude.ai) connects to `/mcp` and authenticates
 2. The server registers MCP tools: `execve`, `execve_pipeline`, `write_file`, `patch_file`, `env_set`, and `env_delete`
-3. `execve` runs a program directly (no shell) with an argument vector and returns stdout, stderr, and the exit code. `execve_pipeline` does the same but pipes stdout of each stage into stdin of the next. Most filesystem work uses `execve` (e.g. `cat`, `ls`, `mv`, `rm`). `write_file` covers creating and overwriting text without a shell; `patch_file` applies structured line patches. `env_set`/`env_delete` persist environment variables (credentials, API keys) that are automatically injected into every `execve` call. The AI also uses the filesystem directly for memory (`/data/MEMORY.md`) and per-tool skills (`/data/skills/*.md`).
+3. `execve` runs a program directly (no shell) with an argument vector and returns stdout, stderr, and the exit code. `execve_pipeline` does the same but pipes stdout of each stage into stdin of the next. Most filesystem work uses `execve` (e.g. `cat`, `ls`, `mv`, `rm`). `write_file` covers creating and overwriting text without a shell; `patch_file` applies structured line patches. `env_set`/`env_delete` persist environment variables (credentials, API keys) that are automatically injected into every `execve` call. The AI also uses the filesystem directly for memory (`/data/MEMORY.md`) and per-tool skills (`/data/skills/*.md`), discovered via a skill index at `/data/skills/INDEX.md`.
 4. OAuth is fully in-memory — tokens rotate on every deploy, no database needed
 
 ## Setup for the User
