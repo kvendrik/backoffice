@@ -80,11 +80,19 @@ function loadOrCreateAuthPassphrase(): string {
 
 const authPassphrase = USE_MCP_TOKEN_AUTH ? undefined : loadOrCreateAuthPassphrase();
 
-const oauth = createOAuthRuntime({
+const OAUTH_RESET_ON_RESTART =
+  process.env["OAUTH_RESET_ON_RESTART"] === "1" ||
+  process.env["OAUTH_RESET_ON_RESTART"] === "true";
+
+const oauthStateFile =
+  !USE_MCP_TOKEN_AUTH && !OAUTH_RESET_ON_RESTART ? "/data/oauth-state.json" : undefined;
+
+const oauth = await createOAuthRuntime({
   issuerUrl,
   mcpServerUrl,
   resourceName: "filesystem-mcp",
   ...(authPassphrase !== undefined ? { authPassphrase } : {}),
+  ...(oauthStateFile !== undefined ? { stateFile: oauthStateFile } : {}),
 });
 
 interface SessionEntry {

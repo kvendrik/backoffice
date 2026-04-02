@@ -70,7 +70,8 @@ Backoffice comes with full OAuth. Apps like Claude.ai handle the entire flow aut
 
 The OAuth consent screen requires a passphrase before issuing tokens. A passphrase is auto-generated on startup and printed to stdout. Set `AUTH_PASSPHRASE` to use your own.
 
-- **In-memory state.** Tokens are lost on restart, so they're naturally rotated on every deploy. Apps like Claude.ai re-authenticate automatically.
+- **Persistent state (default).** Tokens are saved to `/data/oauth-state.json` and survive restarts and redeploys. Requires a `/data` Volume — see "Persisting Data" below. Set `OAUTH_RESET_ON_RESTART=1` to disable.
+- **In-memory state.** Set `OAUTH_RESET_ON_RESTART=1` to disable persistence. Tokens are lost on restart and apps like Claude.ai re-authenticate automatically.
 - **Short-lived tokens.** Access tokens expire every hour. Apps like Claude.ai refresh them automatically.
 
 ## Tools

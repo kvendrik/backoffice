@@ -11,7 +11,7 @@ It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). C
 1. An MCP client (e.g. Claude.ai) connects to `/mcp` and authenticates
 2. The server registers MCP tools: `execve`, `execve_pipeline`, `write_file`, `patch_file`, `env_set`, `env_delete`, `memory_read`, `memory_write`, and `get_instructions`
 3. `execve` runs a program directly (no shell) with an argument vector and returns stdout, stderr, and the exit code. `execve_pipeline` does the same but pipes stdout of each stage into stdin of the next. Most filesystem work uses `execve` (e.g. `cat`, `ls`, `mv`, `rm`). `write_file` covers creating and overwriting text without a shell; `patch_file` applies structured line patches. `env_set`/`env_delete` persist environment variables (credentials, API keys) that are automatically injected into every `execve` call. `memory_read`/`memory_write` give the AI persistent memory across conversations (`/data/MEMORY.md`). `get_instructions` returns the full system instructions for the MCP server.
-4. OAuth is fully in-memory — tokens rotate on every deploy, no database needed
+4. OAuth state is saved to `/data/oauth-state.json` by default so tokens survive restarts; set `OAUTH_RESET_ON_RESTART=1` to use in-memory only
 
 ## Setup for the User
 
@@ -64,6 +64,7 @@ src/
     index.ts        # Re-exports
     runtime.ts      # OAuth endpoint handlers (authorize, token, register)
     memoryProvider.ts  # In-memory OAuth client/token store
+    fileProvider.ts    # File-backed OAuth store (used when OAUTH_STATE_FILE is set)
     eventStore.ts   # In-memory SSE event store for resumable streams
 ```
 
@@ -87,6 +88,7 @@ bun run format:check # Check formatting
 | `PUBLIC_BASE_URL`       | No       | Public origin for OAuth metadata. Set when not on Railway.                                                    |
 | `RAILWAY_PUBLIC_DOMAIN` | No       | Auto-set by Railway. Used as public origin if `PUBLIC_BASE_URL` is unset.                                     |
 | `AUTH_PASSPHRASE`       | No       | Passphrase required on the OAuth authorize screen. Auto-generated on startup if not set. Printed to stdout.   |
+| `OAUTH_RESET_ON_RESTART` | No      | Set to `1` to disable OAuth state persistence. By default, state is saved to `/data/oauth-state.json` so tokens survive restarts. Not used when `USE_MCP_TOKEN_AUTH=1`. |
 | `USE_MCP_TOKEN_AUTH`    | No       | Set to `1` to use static bearer token auth instead of OAuth. Useful for local dev or non-browser MCP clients. |
 | `MCP_TOKEN`             | No       | Static bearer token (only used when `USE_MCP_TOKEN_AUTH=1`). Auto-generated to `.mcp-token` if unset.         |
 
@@ -105,4 +107,4 @@ The server prints the bearer token to stdout. Use it as `Authorization: Bearer <
 - Explicit `undefined`/`null` checks instead of loose truthiness
 - Use `node:` prefix for Node built-ins (`node:crypto`, `node:fs`)
 - Zod for all runtime input validation
-- All OAuth state is in-memory (no database)
+- OAuth state is persisted to `/data/oauth-state.json` by default; set `OAUTH_RESET_ON_RESTART=1` for in-memory only
