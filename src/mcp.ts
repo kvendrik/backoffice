@@ -25,11 +25,8 @@ export function withCors(response: Response): Response {
   });
 }
 
-export function createMcpServer(): McpServer {
-  const server = new McpServer(
-    { name, version },
-    { instructions },
-  );
-  createTools(server);
+export async function createMcpServer(): Promise<McpServer> {
+  const server = new McpServer({ name, version }, { instructions });
+  await createTools(server);
   return server;
 }

@@ -6,6 +6,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { version } from "../package.json" with { type: "json" };
 import { createMcpServer, mcpCorsHeaders, withCors } from "./mcp";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createOAuthRuntime, InMemoryEventStore } from "./oauth";
 
 const portEnv = process.env["PORT"];
@@ -88,7 +89,7 @@ const oauth = createOAuthRuntime({
 
 interface SessionEntry {
   transport: WebStandardStreamableHTTPServerTransport;
-  server: ReturnType<typeof createMcpServer>;
+  server: McpServer;
 }
 
 const oauthSessions = new Map<string, SessionEntry>();
@@ -145,7 +146,7 @@ async function handleMcpSession(
     parsedBody !== undefined &&
     bodyHasInitialize(parsedBody)
   ) {
-    const server = createMcpServer();
+    const server = await createMcpServer();
     const eventStore = authInfo !== undefined ? new InMemoryEventStore() : undefined;
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
