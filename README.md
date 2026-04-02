@@ -65,20 +65,23 @@ By default Railway spins up a fresh container on every deploy. To persist data (
 
 Backoffice exposes the following tools:
 
-| Tool | Purpose |
-| --- | --- |
-| `execve` | Run any program directly (no shell). Working directory and environment persist across calls. This is the primary tool — it gives the AI access to every CLI on the machine. |
-| `execve_pipeline` | Pipe multiple programs together (`grep` into `wc`, etc.) using the same execve semantics. Needed because there's no shell to write `\|` in. |
-| `write_file` | Write text to a file, creating parent directories as needed. Exists as a dedicated tool because `execve` uses stdin-less `execve` and can't easily stream content into a file. |
-| `patch_file` | Apply a structured line-based patch to a file. Safer than a full overwrite for small edits to large files. |
-| `note_read` | Read a persistent note file. The AI calls this at the start of every conversation to recall what it learned previously (installed CLIs, paths, credentials locations, etc.). |
-| `note_write` | Overwrite the persistent note file. The AI uses this to save context that should survive across conversations. |
+| Tool              | Purpose                                                                                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `execve`          | Run any program directly (no shell). Working directory and environment persist across calls. This is the primary tool — it gives the AI access to every CLI on the machine.  |
+| `execve_pipeline` | Pipe multiple programs together (`grep` into `wc`, etc.) using the same execve semantics. Needed because there's no shell to write `\|` in.                                  |
+| `write_file`      | Write text to a file, creating parent directories as needed. Exists as a dedicated tool because shell redirects and piping to stdin are unavailable in `execve`              |
+| `patch_file`      | Apply a structured line-based patch to a file. Safer than a full overwrite for small edits to large files.                                                                   |
+| `note_read`       | Read a persistent note file. The AI calls this at the start of every conversation to recall what it learned previously (installed CLIs, paths, credentials locations, etc.). |
+| `note_write`      | Overwrite the persistent note file. The AI uses this to save context that should survive across conversations.                                                               |
 
 ## Security
 
-Backoffice gives the AI broad access to the machine it's deployed to. To reduce the risk of accidental damage, it applies a few guardrails:
+`execve`, `execve_pipeline`, and `write_file` together basically replace a `exec` tool with full shell access. The reason we do this is to create more control over what commands the LLM is trying to execute.
 
-- **No shell.** Commands run via `execve` (direct process execution), not `bash -c`. This eliminates shell injection and ensures every command is a structured program + argument list.
-- **Dangerous command policy.** A blocklist prevents common mistakes: shell interpreters (which would bypass the execve design), privilege escalation (`sudo`), destructive disk operations (`dd`, `shred`), raw network tools (`nc`), and others. Some commands like `rm`, `git`, and `curl` are allowed but restricted to safe flag combinations.
+`execve` requires the LLM to call a single command + arguments at a time which allows us to analyze what it's trying to do a lot better than if we would allow shell redirects and pipes. When it tries to run a command we:
 
-These are **guardrails, not a sandbox.** They prevent the LLM from accidentally doing something destructive during normal use. They do not protect against a determined or compromised model — an LLM could still write a script to disk and execute it, for example. The real security boundary is the infrastructure: deploy on an isolated, ephemeral machine like Railway, so that the blast radius of anything unexpected is limited.
+1. **Run it through the [policy system](/src/tools/policy/index.ts#L18-L25)**, which analyzes what goes in and comes out of a tool call.
+2. **Resolve the binary**. For `execve` we first resolve the binary. This is so that we know what command the LLM is _really_ trying to run (resolves symlinks and aliases to their actual binaries).
+3. **Check for [dangerous commands](/src/tools/policy/exec/dangerous.ts)**. We check is the command the LLM is trying to run is potentially dangerous.
+
+Doing this is best practise and it’s a pretty good system to prevent the LLM from accidentally doing something destructive during normal use. **Please do note that this does not protect against a determined or compromised model** — an LLM could still write a script to disk and execute it, for example. The real security boundary is the infrastructure: **deploy on an isolated, ephemeral machine like Railway, so that the blast radius of anything unexpected is limited.**
