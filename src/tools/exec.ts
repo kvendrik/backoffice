@@ -18,7 +18,7 @@ export function register(server: McpServer): void {
     "execve",
     {
       description:
-        "Executes a program directly (no shell). The program is resolved via PATH and called with the given argv. Working directory and environment persist across calls. No glob expansion — use find/ls to match patterns instead of wildcards in args.",
+        "Executes a program directly (no shell). The program is resolved via PATH and called with the given argv. Working directory and environment persist across calls. No glob expansion — use find/ls to match patterns instead of wildcards in args. Important: Always call memory_read before using this tool.",
       inputSchema: {
         program: z.string().describe("Executable name or path"),
         args: z.array(z.string()).default([]).describe("Argument vector"),
@@ -63,7 +63,7 @@ export function register(server: McpServer): void {
     "execve_pipeline",
     {
       description:
-        "Executes a pipeline of programs, piping stdout of each into stdin of the next. Each stage uses execve semantics (no shell). Working directory and environment persist across calls.",
+        "Executes a pipeline of programs, piping stdout of each into stdin of the next. Each stage uses execve semantics (no shell). Working directory and environment persist across calls. Important: Always call memory_read before using this tool.",
       inputSchema: {
         commands: z
           .array(
@@ -162,7 +162,8 @@ function cappedCollector(maxBytes: number) {
     buf += chunk;
   };
   const value = (): string => {
-    if (truncated) return `${buf}\n… output truncated (exceeded ${String(maxBytes)} bytes, increase max_output_bytes) …`;
+    if (truncated)
+      return `${buf}\n… output truncated (exceeded ${String(maxBytes)} bytes, increase max_output_bytes) …`;
     return buf;
   };
   return { append, value };
