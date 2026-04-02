@@ -46,7 +46,7 @@ railway up
 
 ### 4. Use it
 
-Start a new conversation on Claude.ai. Claude will now have access to a set of tools that execute commands on your remote machine.
+Start a new conversation with your assistant. It will now have access to the remote machine through the Backoffice MCP.
 
 ## Authentication
 
