@@ -45,11 +45,6 @@ const ALWAYS_BLOCKED: DangerousCommand[] = [
     binaries: ["kill", "killall", "pkill"],
     reason: "process control commands are not allowed",
   },
-  // Task scheduling
-  {
-    binaries: ["crontab", "at"],
-    reason: "task scheduling is not allowed",
-  },
 ];
 
 /**

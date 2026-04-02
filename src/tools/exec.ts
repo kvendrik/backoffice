@@ -30,7 +30,9 @@ export function register(server: McpServer): void {
           .int()
           .positive()
           .default(DEFAULT_TIMEOUT_MS)
-          .describe("Timeout in milliseconds. Defaults to 30000 (30s). Increase for long-running commands."),
+          .describe(
+            "Timeout in milliseconds. Defaults to 30000 (30s). Increase for long-running commands.",
+          ),
       },
     },
     async ({ program, args, cwd, env, timeout_ms }) => {
@@ -66,7 +68,9 @@ export function register(server: McpServer): void {
           .int()
           .positive()
           .default(DEFAULT_TIMEOUT_MS)
-          .describe("Timeout in milliseconds. Defaults to 30000 (30s). Increase for long-running commands."),
+          .describe(
+            "Timeout in milliseconds. Defaults to 30000 (30s). Increase for long-running commands.",
+          ),
       },
     },
     async ({ commands, cwd, env, timeout_ms }) => {
