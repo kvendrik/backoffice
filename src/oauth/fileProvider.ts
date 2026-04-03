@@ -142,10 +142,10 @@ export class BunFileOAuthProvider {
 
       console.log(
         `[oauth] Loaded state from ${this.filePath}: ` +
-          `${this.clientsStore.clients.size} client(s), ` +
-          `${this.tokens.size} active token(s)` +
-          (expiredTokens > 0 ? ` (${expiredTokens} expired, skipped)` : "") +
-          `, ${this.refreshTokens.size} refresh token(s).`,
+          `${String(this.clientsStore.clients.size)} client(s), ` +
+          `${String(this.tokens.size)} active token(s)` +
+          (expiredTokens > 0 ? ` (${String(expiredTokens)} expired, skipped)` : "") +
+          `, ${String(this.refreshTokens.size)} refresh token(s).`,
       );
     } catch (err) {
       console.warn(`[oauth] Failed to load state from ${this.filePath} — starting fresh.`, err);
@@ -288,7 +288,7 @@ export class BunFileOAuthProvider {
     if (tokenData.expiresAt < Date.now()) {
       console.warn(
         `[oauth] verifyAccessToken: token expired for client=${tokenData.clientId} ` +
-          `(expired ${Math.round((Date.now() - tokenData.expiresAt) / 1000)}s ago)`,
+          `(expired ${String(Math.round((Date.now() - tokenData.expiresAt) / 1000))}s ago)`,
       );
       throw new InvalidTokenError("Invalid or expired token");
     }

@@ -76,36 +76,32 @@ The OAuth consent screen requires a passphrase before issuing tokens. A passphra
 
 ## Tools
 
-Backoffice exposes the following tools:
-
-| Tool               | Purpose                                                                                                                                                                                                                                                                                                                             |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `execve`           | Run any program directly (no shell). Working directory and environment persist across calls. This is the primary tool — it gives the AI access to every CLI on the machine. Output is capped at 1 MB per stream by default (configurable via `max_output_bytes`). Persistent env vars set via `env_set` are automatically injected. |
-| `execve_pipeline`  | Pipe multiple programs together (`grep` into `wc`, etc.) using the same execve semantics. Needed because there's no shell to write `\|` in. Same output cap as `execve`.                                                                                                                                                            |
-| `write_file`       | Write text to a file, creating parent directories as needed. Exists as a dedicated tool because shell redirects and piping to stdin are unavailable in `execve`.                                                                                                                                                                    |
-| `patch_file`       | Apply a structured line-based patch to a file. Safer than a full overwrite for small edits to large files.                                                                                                                                                                                                                          |
-| `env_set`          | Persist an environment variable. Stored on disk and automatically injected into every `execve`/`execve_pipeline` call. Use for credentials and API keys — values are not returned to the conversation.                                                                                                                              |
-| `env_delete`       | Remove a persisted environment variable.                                                                                                                                                                                                                                                                                            |
-| `memory_read`      | Read the persistent memory file (`/data/MEMORY.md`). Called at the start of every conversation to recall context from previous sessions.                                                                                                                                                                                            |
-| `memory_write`     | Write to the persistent memory file. The AI proactively saves anything useful across conversations: installed CLIs, useful paths, environment quirks, user preferences, and how to use specific tools/APIs/services.                                                                                                                |
-| `get_instructions` | Return the full system instructions for the MCP server. The AI can call this if it needs guidance on conventions or tool usage.                                                                                                                                                                                                     |
+| Tool               | Purpose                                                                                                                                                                                                                                      |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shell`            | Run any bash command on the machine. Working directory and environment persist across calls. Output is capped at 1 MB per stream by default (configurable via `max_output_bytes`). Credentials set via `env_set` are automatically injected. |
+| `patch_file`       | Apply a structured line-based patch to a file. Useful for targeted edits to specific lines in large files without rewriting the whole thing.                                                                                                 |
+| `env_set`          | Persist an environment variable. Stored on disk and automatically injected into every `shell` call. Use for credentials and API keys — values are not returned to the conversation.                                                          |
+| `env_delete`       | Remove a persisted environment variable.                                                                                                                                                                                                     |
+| `memory_read`      | Read the persistent memory file (`/data/MEMORY.md`). Called at the start of every conversation to recall context from previous sessions.                                                                                                     |
+| `memory_write`     | Write to the persistent memory file. The AI proactively saves anything useful across conversations: installed CLIs, useful paths, environment quirks, user preferences, and how to use specific tools/APIs/services.                         |
+| `get_instructions` | Return the full system instructions for the MCP server. The AI can call this if it needs guidance on conventions or tool usage.                                                                                                              |
 
 ## Security
 
-`execve`, `execve_pipeline`, and `write_file` together basically replace an `exec` tool with full shell access. The reason we do this is to create more control over what commands the LLM is trying to execute.
+The server runs as a non-root user (`appuser`). This means the OS itself enforces what the process can and can't touch.
 
-`execve` requires the LLM to call a single command + arguments at a time which allows us to analyze what it's trying to do far more reliably than if we allowed shell redirects and pipes. When it tries to run a command we:
+**What's protected:**
 
-1. **Run it through the [policy system](/src/tools/policy/index.ts)**, which analyzes what goes in and comes out of a tool call.
-2. **[Resolve the binary](/src/tools/policy/exec/index.ts)**. For `execve` we first resolve the binary. This is so that we know what command the LLM is _really_ trying to run (resolves symlinks and aliases to their actual binaries).
-3. **Check for [dangerous commands](/src/tools/policy/exec/dangerous.ts)**. We check if the command the LLM is trying to run is potentially dangerous.
-4. **[Filter dangerous `rm` calls](/src/tools/policy/exec/index.ts)**. `rm -r` is allowed, but blocked when any target is `/` or a direct child of `/` (e.g. `/usr`, `/data`). Deeper paths like `/data/old-project` are fine.
-5. **[Filter direct env reads](/src/tools/policy/exec/index.ts)**. Direct reads and writes of the env secrets file and `printenv`/`env` commands are blocked to prevent persisted credentials from leaking back into the conversation (_the LLM could however still write a script that reads the env and run it_).
+- System directories (`/usr`, `/bin`, `/etc`, etc.) — root-owned, unwritable
+- App source (`/app`) — root-owned, unwritable
 
-Doing this is best practice and it's a pretty good system to prevent the LLM from accidentally doing something destructive during normal use. **Please do note that this does not protect against a determined or compromised model** — an LLM could still write a script to disk and execute it, for example. The real security boundary is the infrastructure: **deploy on an isolated, ephemeral machine like Railway, so that the blast radius of anything unexpected is limited.**
+**What's writable:**
+
+- `/data` — persistent volume, owned by `appuser`
+- `/tmp` — ephemeral scratch space
 
 ## Persisting Data
 
 By default Railway spins up a fresh container on every deploy. To persist data add a [Volume](https://docs.railway.com/volumes) in your Railway service settings and mount it at `/data`. The AI is instructed to use `/data` for memory and credentials (via `env_set`), so this path matters. See [Railway's Volumes docs](https://docs.railway.com/volumes) for details.
 
-To persist installed CLIs etc between deploys, add them to the [Dockerfile](/Dockerfile).
+Packages installed via `bun install -g` go to `/data/bun` and packages installed via `brew install` go to `/data/homebrew` — both paths are on the persistent volume, so installed tools survive redeploys automatically.

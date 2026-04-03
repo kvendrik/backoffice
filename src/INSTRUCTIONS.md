@@ -11,25 +11,13 @@ Always call both of these before doing anything else — no exceptions:
 
 ## Constraints
 
-The exec policy enforces these limits on every `execve` call:
-
-- **Shell interpreters are blocked** — use `execve` directly with the program and args instead of `bash -c` or `sh -c`
-- **Use bun scripts for HTTP** — `curl` upload/POST flags are blocked; use `bun -e` for HTTP requests instead
-- **No glob expansion** — use `find` or `ls` to match file patterns instead of wildcards in args
-- **Privilege escalation is blocked** — `sudo`, `su`, `doas` are unavailable
-- **Destructive git flags are blocked** — use safe alternatives instead of `--force`, `-f`, `--hard`
+- **No glob expansion in shell** — bash globs expand against the local filesystem as expected, but prefer `find` or `ls` for explicit file matching when results need to be predictable
+- **Privilege escalation is unavailable** — the server runs as a non-root user; `sudo` is not installed
+- **Destructive git flags** — avoid `--force`, `-f`, `--hard` unless explicitly needed
 
 ## Editing files
 
-Three tools are available — pick the right one:
-
-| Tool | When to use |
-|---|---|
-| `write_file` | Creating a new file or fully replacing an existing one |
-| `patch_file` | Making targeted edits to specific lines in an existing file |
-| `execve` | When you need shell-level control (e.g. appending, piping output to a file) |
-
-Prefer `write_file` and `patch_file` over `execve` for file edits — they are safer and don't require workarounds for the no-shell constraint.
+Use `patch_file` for targeted edits to specific lines in large files — it's safer than a full rewrite and doesn't require reading the whole file first. For everything else (creating files, full rewrites, appending), use the shell.
 
 ## Saving context
 
@@ -38,8 +26,8 @@ Save incrementally as you learn — don't wait until the end of the conversation
 | What you want to persist | How | Notes |
 |---|---|---|
 | Knowledge, steps, gotchas, preferences | `memory_write` | Readable in future conversations via `memory_read` |
-| API keys and secrets | `env_set` | Auto-injected into every `execve` call; values never returned to conversation |
-| Data files, configs, scripts | Write to `/data` via `execve` or `write_file` | Persists across restarts |
+| API keys and secrets | `env_set` | Auto-injected into every `shell` call; values never returned to conversation |
+| Data files, configs, scripts | Write to `/data` via shell | Persists across restarts |
 | Packages (CLI tools, libraries) | `bun install -g` or `brew install` | Installs to `/data/bun` or `/data/homebrew`; persists across restarts |
 | Anything else | Save steps to `memory_write` with **⚠ run after restart:** | Filesystem outside `/data` is wiped on restart |
 
@@ -55,3 +43,15 @@ Organise `memory_write` content with these sections:
 **Rules:**
 - Don't record ephemeral state (file paths outside `/data`, token files in `/root/`, runtime artifacts) as if it persists — save the steps to recreate it instead
 - Label setup steps that must be re-run after a restart with **⚠ run after restart:**
+
+## What survives restarts
+
+| Thing | Survives? |
+|---|---|
+| Files in `/data` | Yes |
+| `env_set` variables | Yes |
+| `memory_write` content | Yes |
+| `bun install -g` packages | Yes — installed to `/data/bun` |
+| `brew install` packages | Yes — installed to `/data/homebrew` |
+| Files outside `/data` | No |
+| Everything else | No |

@@ -467,7 +467,7 @@ export async function createOAuthRuntime(options: {
         throw new ServerError("Registration not supported");
       }
       const clientInfo = await provider.clientsStore.registerClient(newClient);
-      console.log(`[oauth] Registered new client: id=${clientInfo.client_id} name=${String(clientInfo.client_name ?? "(unnamed)")}`);
+      console.log(`[oauth] Registered new client: id=${clientInfo.client_id} name=${clientInfo.client_name ?? "(unnamed)"}`);
       return jsonOAuth(clientInfo, 201);
     } catch (error) {
       if (error instanceof OAuthError) {
