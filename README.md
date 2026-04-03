@@ -110,7 +110,7 @@ Packages installed via `bun install -g` go to `/data/bun` and packages installed
 
 ## Logs
 
-Backoffice keeps logs of all tool calls and results in `/data/logs.jsonl`. Analyzing this file can help you figure out how to improve your setup:
+Backoffice keeps logs of all tool calls (includes caller oauth details) and results in `/data/log.jsonl`. Analyzing this file can help you figure out how to improve your setup:
 
 ```bash
 railway ssh -- cat /data/log.jsonl > "/tmp/backoffice-logs-$(date +%Y-%m-%d).jsonl"
