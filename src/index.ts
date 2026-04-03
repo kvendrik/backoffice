@@ -95,10 +95,15 @@ if (!USE_MCP_TOKEN_AUTH) {
   }
 }
 
+const allowedRedirectUriPrefixes = process.env["ALLOWED_REDIRECT_URI_PREFIXES"]
+  ? process.env["ALLOWED_REDIRECT_URI_PREFIXES"].split(",").map((s) => s.trim()).filter(Boolean)
+  : ["https://claude.ai/"];
+
 const oauth = await createOAuthRuntime({
   issuerUrl,
   mcpServerUrl,
   resourceName: "filesystem-mcp",
+  allowedRedirectUriPrefixes,
   ...(authPassphrase !== undefined ? { authPassphrase } : {}),
   ...(oauthStateFile !== undefined ? { stateFile: oauthStateFile } : {}),
 });

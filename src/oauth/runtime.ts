@@ -204,6 +204,7 @@ export async function createOAuthRuntime(options: {
   resourceName?: string;
   authPassphrase?: string;
   stateFile?: string;
+  allowedRedirectUriPrefixes?: string[];
 }): Promise<OAuthRuntime> {
   const {
     issuerUrl,
@@ -211,6 +212,7 @@ export async function createOAuthRuntime(options: {
     resourceName = "filesystem-mcp",
     authPassphrase,
     stateFile,
+    allowedRedirectUriPrefixes = ["https://claude.ai/"],
   } = options;
 
   const validateResource = (resource: URL | undefined): boolean => {
@@ -449,6 +451,14 @@ export async function createOAuthRuntime(options: {
         throw new InvalidClientMetadataError(parseResult.error.message);
       }
       const clientMetadata = parseResult.data;
+      const disallowed = clientMetadata.redirect_uris.find(
+        (uri) => !allowedRedirectUriPrefixes.some((prefix) => uri.startsWith(prefix)),
+      );
+      if (disallowed !== undefined) {
+        throw new InvalidClientMetadataError(
+          `redirect_uri not allowed: ${disallowed}`,
+        );
+      }
       const isPublicClient = clientMetadata.token_endpoint_auth_method === "none";
       const clientSecret = isPublicClient ? undefined : randomBytes(32).toString("hex");
       const clientIdIssuedAt = Math.floor(Date.now() / 1000);
