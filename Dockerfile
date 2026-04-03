@@ -1,5 +1,8 @@
 FROM oven/bun:1 AS base
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl git procps file \
+    && rm -rf /var/lib/apt/lists/*
 
 FROM base AS install
 COPY package.json bun.lock ./

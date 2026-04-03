@@ -145,7 +145,17 @@ function formatResult(stdout: string, stderr: string, code: number | null, sessi
 }
 
 function sessionEnv(session: Session): NodeJS.ProcessEnv {
-  return { ...process.env, ...getPersistedEnv(), ...session.env };
+  const base = { ...process.env, ...getPersistedEnv(), ...session.env };
+  const existingPath = base["PATH"] ?? "";
+  const persistedPaths = "/data/bun/bin:/data/homebrew/bin:/data/homebrew/sbin";
+  return {
+    ...base,
+    BUN_INSTALL: base["BUN_INSTALL"] ?? "/data/bun",
+    HOMEBREW_PREFIX: base["HOMEBREW_PREFIX"] ?? "/data/homebrew",
+    HOMEBREW_CELLAR: base["HOMEBREW_CELLAR"] ?? "/data/homebrew/Cellar",
+    HOMEBREW_REPOSITORY: base["HOMEBREW_REPOSITORY"] ?? "/data/homebrew",
+    PATH: existingPath ? `${persistedPaths}:${existingPath}` : persistedPaths,
+  };
 }
 
 function cappedCollector(maxBytes: number) {
