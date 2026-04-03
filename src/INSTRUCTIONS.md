@@ -19,14 +19,31 @@ Always call both of these before doing anything else — no exceptions:
 
 Use `patch_file` for targeted edits to specific lines in large files — it's safer than a full rewrite and doesn't require reading the whole file first. For everything else (creating files, full rewrites, appending), use the shell.
 
+### Patch format
+
+```
+*** Begin Patch
+*** Update File: /absolute/path/to/file
+@@ optional hunk label
+ context line (space prefix — must match file exactly)
+-line to remove (minus prefix — must match file exactly)
++line to add (plus prefix)
+*** End Patch
+```
+
+To create a new file use `*** Add File:` instead of `*** Update File:`. Context and removal lines must match the file character-for-character — a single mismatch fails the whole patch. Multiple hunks are supported; separate them with additional `@@` lines.
+
 ## Saving context
 
 Save incrementally as you learn — don't wait until the end of the conversation. If a session gets interrupted, anything unsaved is lost.
 
 | What you want to persist | How | Notes |
 |---|---|---|
-| Knowledge, steps, gotchas, preferences | `memory_write` | Readable in future conversations via `memory_read` |
+| Knowledge, steps, gotchas, preferences (full restructure) | `memory_write` | Replaces the entire memory file |
+| Add new information | `memory_append` | Appends to the end — no format, no context required. Place content under the appropriate section header (Environment, Installed tools, Services, User preferences) so the file stays organised |
+| Fix a stale entry, remove outdated info | `memory_patch` | Same patch format as `patch_file`. The path in the patch must be `/data/MEMORY.md` |
 | API keys and secrets | `env_set` | Auto-injected into every `shell` call; values never returned to conversation |
+| Remove a persisted credential | `env_delete` | Pass the variable name |
 | Data files, configs, scripts | Write to `/data` via shell | Persists across restarts |
 | Packages (CLI tools, libraries) | `bun install -g` or `brew install` | Installs to `/data/bun` or `/data/homebrew`; persists across restarts |
 | Anything else | Save steps to `memory_write` with **⚠ run after restart:** | Filesystem outside `/data` is wiped on restart |

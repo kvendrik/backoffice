@@ -84,6 +84,8 @@ The OAuth consent screen requires a passphrase before issuing tokens. A passphra
 | `env_delete`       | Remove a persisted environment variable.                                                                                                                                                                                                     |
 | `memory_read`      | Read the persistent memory file (`/data/MEMORY.md`). Called at the start of every conversation to recall context from previous sessions.                                                                                                     |
 | `memory_write`     | Write to the persistent memory file. The AI proactively saves anything useful across conversations: installed CLIs, useful paths, environment quirks, user preferences, and how to use specific tools/APIs/services.                         |
+| `memory_append`    | Append content to the memory file. The simplest way to add new information — no format overhead, no context-mismatch risk.                                                                                                                   |
+| `memory_patch`     | Apply a targeted patch to the memory file using the same `*** Begin Patch` format as `patch_file`. Use for surgical replacements of known stale content.                                                                                     |
 | `get_instructions` | Return the full system instructions for the MCP server. The AI can call this if it needs guidance on conventions or tool usage.                                                                                                              |
 
 ## Security

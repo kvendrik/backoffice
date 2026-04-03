@@ -42,7 +42,7 @@ interface ParsedPatch {
   lines: string[];
 }
 
-function parsePatch(patchText: string): ParsedPatch {
+export function parsePatch(patchText: string): ParsedPatch {
   const lines = patchText.replace(/\r\n/g, "\n").split("\n");
   if (lines.length < 3) {
     throw new Error("Patch must contain at least a begin line, header, and end line.");
@@ -167,7 +167,34 @@ async function applyUpdate(filePath: string, hunkLines: string[]): Promise<void>
   await writeFile(resolved, newLines.join("\n"), "utf8");
 }
 
-async function applyPatch(patchText: string): Promise<string> {
+/**
+ * Applies a patch to a file using the "*** Begin Patch" format.
+ *
+ * Syntax:
+ *
+ *   *** Begin Patch
+ *   *** Update File: /absolute/path/to/file
+ *   @@ optional hunk label
+ *    context line (space prefix — must match file exactly)
+ *   -line to remove (minus prefix — must match file exactly)
+ *   +line to add (plus prefix)
+ *   *** End of File
+ *   *** End Patch
+ *
+ * To create a new file instead of updating one, use:
+ *   *** Add File: /absolute/path/to/file
+ *
+ * Rules:
+ * - The file path must be absolute.
+ * - Context lines (space-prefixed) and removal lines (minus-prefixed) must
+ *   match the file content exactly, character for character.
+ * - Multiple hunks are supported — separate them with additional @@ lines.
+ * - "*** End of File" is optional. When present in an update patch, it stops
+ *   hunk processing early — any remaining hunk lines after it are ignored.
+ *   Remaining lines in the original file are always preserved regardless.
+ * - Returns the absolute path of the patched file.
+ */
+export async function applyPatch(patchText: string): Promise<string> {
   const parsed = parsePatch(patchText);
 
   if (!parsed.filePath.startsWith("/")) {

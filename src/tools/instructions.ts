@@ -7,7 +7,7 @@ export function register(server: McpServer): void {
     "get_instructions",
     {
       description:
-        "Get the full system instructions for this MCP server. Call this if you're unsure how to use the available tools or need guidance on conventions.",
+        "Get the full system instructions for this MCP server. Call this at the start of every conversation before using any other tool.",
       inputSchema: {},
     },
     () => ({

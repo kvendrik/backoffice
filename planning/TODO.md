@@ -1,8 +1,3 @@
-## T1
-
-- [ ] install packages to /data for persistence from Bun and brew
-- [ ] learn from the MEMORY file Claude saved
-
 ## T2
 
 - [ ] The open registration endpoint — anyone can POST to /oauth/register without auth. Not in the security section at all. It's not dangerous but it's a DoS surface worth a note.

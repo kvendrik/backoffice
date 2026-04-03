@@ -34,9 +34,10 @@ function applyLogging(server: McpServer): void {
 
   const patched = (name: string, config: any, cb: any): any =>
     orig(name, config, async (args: any, extra: any): Promise<CallToolResult> => {
+      const rawArgs = args as Record<string, unknown>;
       const ctx: ToolCallContext = {
         toolName: name,
-        args: args as Record<string, unknown>,
+        args: name === "env_set" ? { ...rawArgs, value: "[redacted]" } : rawArgs,
       };
 
       const callId = nanoid();
