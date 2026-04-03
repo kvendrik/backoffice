@@ -144,16 +144,42 @@ async function applyUpdate(filePath: string, hunkLines: string[]): Promise<void>
 
   let currentHunk: string[] = [];
 
-  for (const line of hunkLines) {
+  let hunkIdx = 0;
+  while (hunkIdx < hunkLines.length) {
+    const line = hunkLines[hunkIdx]!;
+
     if (line.startsWith("@@")) {
       if (currentHunk.length > 0) {
         applyHunk(currentHunk);
         currentHunk = [];
       }
+      // Seek originalIndex to the position of the next hunk's first context/removal line.
+      // Without this, @@ is purely decorative and all hunks must be contiguous from line 1.
+      let peekIdx = hunkIdx + 1;
+      while (peekIdx < hunkLines.length && (hunkLines[peekIdx]!.length === 0 || hunkLines[peekIdx]!.startsWith("@@"))) {
+        peekIdx++;
+      }
+      const anchor = hunkLines[peekIdx];
+      if (anchor && anchor !== "*** End of File" && (anchor[0] === " " || anchor[0] === "-")) {
+        const anchorContent = anchor.slice(1);
+        let seekIdx = originalIndex;
+        while (seekIdx < originalLines.length && originalLines[seekIdx] !== anchorContent) {
+          seekIdx++;
+        }
+        if (seekIdx < originalLines.length) {
+          while (originalIndex < seekIdx) {
+            newLines.push(originalLines[originalIndex]!);
+            originalIndex++;
+          }
+        }
+      }
+      hunkIdx++;
       continue;
     }
+
     if (line === "*** End of File") break;
     currentHunk.push(line);
+    hunkIdx++;
   }
 
   if (currentHunk.length > 0) applyHunk(currentHunk);
