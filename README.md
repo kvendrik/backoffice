@@ -107,3 +107,12 @@ The server runs as a non-root user (`appuser`). This means the OS itself enforce
 By default Railway spins up a fresh container on every deploy. To persist data add a [Volume](https://docs.railway.com/volumes) in your Railway service settings and mount it at `/data`. The AI is instructed to use `/data` for memory and credentials (via `env_set`), so this path matters. See [Railway's Volumes docs](https://docs.railway.com/volumes) for details.
 
 Packages installed via `bun install -g` go to `/data/bun` and packages installed via `brew install` go to `/data/homebrew` — both paths are on the persistent volume, so installed tools survive redeploys automatically.
+
+## Logs
+
+Backoffice keeps logs of all tool calls and results in `/data/logs.jsonl`. Analyzing this file can help you figure out how to improve your setup:
+
+```bash
+railway ssh -- cat /data/log.jsonl > "planning/logs-$(date +%Y-%m-%d).md"
+claude "@planning/logs-$(date +%Y-%m-%d).md are the logs from the Backoffice railway server and show how the AI assistant has been using Backoffice. Tell me what you notice."
+```
