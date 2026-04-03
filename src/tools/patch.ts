@@ -146,6 +146,7 @@ async function applyUpdate(filePath: string, hunkLines: string[]): Promise<void>
 
   let hunkIdx = 0;
   while (hunkIdx < hunkLines.length) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const line = hunkLines[hunkIdx]!;
 
     if (line.startsWith("@@")) {
@@ -156,11 +157,19 @@ async function applyUpdate(filePath: string, hunkLines: string[]): Promise<void>
       // Seek originalIndex to the position of the next hunk's first context/removal line.
       // Without this, @@ is purely decorative and all hunks must be contiguous from line 1.
       let peekIdx = hunkIdx + 1;
-      while (peekIdx < hunkLines.length && (hunkLines[peekIdx]!.length === 0 || hunkLines[peekIdx]!.startsWith("@@"))) {
+      while (
+        peekIdx < hunkLines.length &&
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        (hunkLines[peekIdx]!.length === 0 || hunkLines[peekIdx]!.startsWith("@@"))
+      ) {
         peekIdx++;
       }
       const anchor = hunkLines[peekIdx];
-      if (anchor && anchor !== "*** End of File" && (anchor[0] === " " || anchor[0] === "-")) {
+      if (
+        anchor &&
+        anchor !== "*** End of File" &&
+        (anchor.startsWith(" ") || anchor.startsWith("-"))
+      ) {
         const anchorContent = anchor.slice(1);
         let seekIdx = originalIndex;
         while (seekIdx < originalLines.length && originalLines[seekIdx] !== anchorContent) {
@@ -168,6 +177,7 @@ async function applyUpdate(filePath: string, hunkLines: string[]): Promise<void>
         }
         if (seekIdx < originalLines.length) {
           while (originalIndex < seekIdx) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             newLines.push(originalLines[originalIndex]!);
             originalIndex++;
           }
