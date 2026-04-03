@@ -1,10 +1,7 @@
 ## T1
 
-- [ ] Oauth persistance between sessions does not work. When Railway redeploys and Claude tries to query the MCP the MCP throws an error I can't see because Claude just says "An error occured during tool execution".
-
 - [ ] install packages to /data for persistence from Bun and brew
 - [ ] learn from the MEMORY file Claude saved
-- [ ] Tool call logs
 
 ## T2
 
