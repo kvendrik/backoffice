@@ -108,7 +108,10 @@ export class BunFileOAuthProvider {
 
   private async load(): Promise<void> {
     const file = Bun.file(this.filePath);
-    if (!(await file.exists())) return;
+    if (!(await file.exists())) {
+      console.log(`[oauth] No state file at ${this.filePath} — starting fresh.`);
+      return;
+    }
 
     try {
       const state = (await file.json()) as PersistedState;
@@ -118,12 +121,15 @@ export class BunFileOAuthProvider {
         this.clientsStore.clients.set(id, client);
       }
 
+      let expiredTokens = 0;
       for (const [token, entry] of state.tokens) {
         if (entry.expiresAt > now) {
           this.tokens.set(token, {
             ...entry,
             resource: entry.resource !== undefined ? new URL(entry.resource) : undefined,
           });
+        } else {
+          expiredTokens++;
         }
       }
 
@@ -133,8 +139,16 @@ export class BunFileOAuthProvider {
           resource: entry.resource !== undefined ? new URL(entry.resource) : undefined,
         });
       }
-    } catch {
-      console.warn(`[oauth] Failed to load state from ${this.filePath} — starting fresh.`);
+
+      console.log(
+        `[oauth] Loaded state from ${this.filePath}: ` +
+          `${this.clientsStore.clients.size} client(s), ` +
+          `${this.tokens.size} active token(s)` +
+          (expiredTokens > 0 ? ` (${expiredTokens} expired, skipped)` : "") +
+          `, ${this.refreshTokens.size} refresh token(s).`,
+      );
+    } catch (err) {
+      console.warn(`[oauth] Failed to load state from ${this.filePath} — starting fresh.`, err);
     }
   }
 
@@ -150,7 +164,12 @@ export class BunFileOAuthProvider {
         { ...v, resource: v.resource?.href } as SerializedRefreshEntry,
       ]),
     };
-    await Bun.write(this.filePath, JSON.stringify(state));
+    try {
+      await Bun.write(this.filePath, JSON.stringify(state));
+    } catch (err) {
+      console.error(`[oauth] Failed to save state to ${this.filePath}:`, err);
+      throw err;
+    }
   }
 
   buildAuthorizationRedirect(
@@ -262,7 +281,15 @@ export class BunFileOAuthProvider {
     resource?: URL;
   }> {
     const tokenData = this.tokens.get(token);
-    if (tokenData?.expiresAt === undefined || tokenData.expiresAt < Date.now()) {
+    if (tokenData === undefined) {
+      console.warn("[oauth] verifyAccessToken: token not found (unknown or already expired out of memory)");
+      throw new InvalidTokenError("Invalid or expired token");
+    }
+    if (tokenData.expiresAt < Date.now()) {
+      console.warn(
+        `[oauth] verifyAccessToken: token expired for client=${tokenData.clientId} ` +
+          `(expired ${Math.round((Date.now() - tokenData.expiresAt) / 1000)}s ago)`,
+      );
       throw new InvalidTokenError("Invalid or expired token");
     }
     const base = {

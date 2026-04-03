@@ -422,7 +422,9 @@ export async function createOAuthRuntime(options: {
           if (!rt) {
             throw new InvalidRequestError("Missing refresh_token parameter");
           }
+          console.log(`[oauth] Refreshing token for client=${client.client_id}`);
           const tokens = await provider.exchangeRefreshToken(client, rt);
+          console.log(`[oauth] Token refreshed for client=${client.client_id}`);
           return jsonOAuth(tokens, 200);
         }
         default:
@@ -465,6 +467,7 @@ export async function createOAuthRuntime(options: {
         throw new ServerError("Registration not supported");
       }
       const clientInfo = await provider.clientsStore.registerClient(newClient);
+      console.log(`[oauth] Registered new client: id=${clientInfo.client_id} name=${String(clientInfo.client_name ?? "(unnamed)")}`);
       return jsonOAuth(clientInfo, 201);
     } catch (error) {
       if (error instanceof OAuthError) {
@@ -555,6 +558,7 @@ export async function createOAuthRuntime(options: {
       return { authInfo };
     } catch (error) {
       if (error instanceof InvalidTokenError) {
+        console.warn(`[oauth] verifyMcpBearer: 401 ${error.errorCode} — ${error.message}`);
         return {
           response: jsonOAuth(error.toResponseObject(), 401, {
             "WWW-Authenticate": buildWwwAuthHeader(error.errorCode, error.message),
@@ -562,6 +566,7 @@ export async function createOAuthRuntime(options: {
         };
       }
       if (error instanceof InsufficientScopeError) {
+        console.warn(`[oauth] verifyMcpBearer: 403 ${error.errorCode} — ${error.message}`);
         return {
           response: jsonOAuth(error.toResponseObject(), 403, {
             "WWW-Authenticate": buildWwwAuthHeader(error.errorCode, error.message),
@@ -569,11 +574,14 @@ export async function createOAuthRuntime(options: {
         };
       }
       if (error instanceof ServerError) {
+        console.error(`[oauth] verifyMcpBearer: 500 — ${error.message}`);
         return { response: jsonOAuth(error.toResponseObject(), 500) };
       }
       if (error instanceof OAuthError) {
+        console.warn(`[oauth] verifyMcpBearer: 400 ${error.errorCode} — ${error.message}`);
         return { response: jsonOAuth(error.toResponseObject(), 400) };
       }
+      console.error("[oauth] verifyMcpBearer: unexpected error —", error);
       return {
         response: jsonOAuth(new ServerError("Internal Server Error").toResponseObject(), 500),
       };

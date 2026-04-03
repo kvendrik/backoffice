@@ -87,6 +87,14 @@ const OAUTH_RESET_ON_RESTART =
 const oauthStateFile =
   !USE_MCP_TOKEN_AUTH && !OAUTH_RESET_ON_RESTART ? "/data/oauth-state.json" : undefined;
 
+if (!USE_MCP_TOKEN_AUTH) {
+  if (oauthStateFile !== undefined) {
+    console.log(`[oauth] Persistence enabled — state file: ${oauthStateFile}`);
+  } else {
+    console.log("[oauth] Persistence disabled (OAUTH_RESET_ON_RESTART=1) — state is in-memory only.");
+  }
+}
+
 const oauth = await createOAuthRuntime({
   issuerUrl,
   mcpServerUrl,
