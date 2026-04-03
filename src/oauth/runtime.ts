@@ -548,12 +548,17 @@ export async function createOAuthRuntime(options: {
       if (verified.expiresAt < Date.now() / 1000) {
         throw new InvalidTokenError("Token has expired");
       }
+      const clientRecord = await provider.clientsStore.getClient(verified.clientId);
       const authInfo: AuthInfo = {
         token: verified.token,
         clientId: verified.clientId,
         scopes: verified.scopes,
         expiresAt: verified.expiresAt,
         ...("resource" in verified ? { resource: verified.resource } : {}),
+        extra: {
+          client_name: clientRecord?.client_name,
+          redirect_uris: clientRecord?.redirect_uris,
+        },
       };
       return { authInfo };
     } catch (error) {

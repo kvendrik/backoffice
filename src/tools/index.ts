@@ -23,13 +23,19 @@ const LOG_FILE = path.join("/data", "log.jsonl");
 interface ToolCallContext {
   toolName: string;
   args: Record<string, unknown>;
+  oauth?: {
+    clientId: string;
+    clientName: string;
+    redirectUris: string[];
+  };
+  sessionId?: string;
 }
 
 function applyLogging(server: McpServer): void {
   // registerTool is a generic overloaded method on McpServer. Wrapping it
   // requires erasing type parameters at the interception boundary; the
   // handler and logging calls themselves remain typed via CallToolResult.
-  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
   const orig: (...a: any[]) => any = server.registerTool.bind(server);
 
   const patched = (name: string, config: any, cb: any): any =>
@@ -38,6 +44,16 @@ function applyLogging(server: McpServer): void {
       const ctx: ToolCallContext = {
         toolName: name,
         args: name === "env_set" ? { ...rawArgs, value: "[redacted]" } : rawArgs,
+        ...(extra.authInfo != null
+          ? {
+              oauth: {
+                clientId: extra.authInfo.clientId,
+                clientName: extra.authInfo.extra?.client_name,
+                redirectUris: extra.authInfo.extra?.redirect_uris,
+              },
+            }
+          : {}),
+        ...(extra.sessionId != null ? { sessionId: extra.sessionId } : {}),
       };
 
       const callId = nanoid();
@@ -68,5 +84,5 @@ function applyLogging(server: McpServer): void {
     });
 
   (server as any).registerTool = patched;
-  /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+  /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 }
