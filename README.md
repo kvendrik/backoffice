@@ -113,6 +113,5 @@ Packages installed via `bun install -g` go to `/data/bun` and packages installed
 Backoffice keeps logs of all tool calls (includes caller oauth details) and results in `/data/log.jsonl`. Analyzing this file can help you figure out how to improve your setup:
 
 ```bash
-railway ssh -- cat /data/log.jsonl > "/tmp/backoffice-logs-$(date +%Y-%m-%d).jsonl"
-claude "@/tmp/backoffice-logs-$(date +%Y-%m-%d).jsonl are the logs from the Backoffice railway server and show how the AI assistant has been using Backoffice. Tell me what you notice."
+claude "Here are the logs from the Backoffice railway server and show how the AI assistant has been using Backoffice. Tell me what you notice.\n\n---\n\n$(railway ssh -- cat /data/log.jsonl)"
 ```
