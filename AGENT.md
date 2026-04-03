@@ -2,15 +2,15 @@
 
 ## What This Is
 
-Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude command-line access on a remote machine via `execve`, `execve_pipeline`, `write_file`, `patch_file`, `env_set`, `env_delete`, `memory_read`, `memory_write`, and `get_instructions` tools. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice. It can also persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
+Backoffice is a remote MCP (Model Context Protocol) server that gives AI assistants like Claude command-line access on a remote machine via `shell`, `patch_file`, `env_set`, `env_delete`, `memory_read`, `memory_write`, `memory_append`, `memory_patch`, and `get_instructions` tools. Instead of relying on individual MCPs for every service, the AI can just use existing CLIs through Backoffice. It can also persist data on disk, run cron jobs, and do whatever other processing you might want to do on the data your AI assistant gives it.
 
-It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). Clients connect over HTTP at `/mcp`, authenticate via OAuth (or a static bearer token), and can then run programs on the host. Commands run via `execve` (no shell) with a policy that blocks accidentally destructive operations.
+It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). Clients connect over HTTP at `/mcp`, authenticate via OAuth (or a static bearer token), and can then run bash commands on the host.
 
 ## How It Works
 
 1. An MCP client (e.g. Claude.ai) connects to `/mcp` and authenticates
-2. The server registers MCP tools: `execve`, `execve_pipeline`, `write_file`, `patch_file`, `env_set`, `env_delete`, `memory_read`, `memory_write`, and `get_instructions`
-3. `execve` runs a program directly (no shell) with an argument vector and returns stdout, stderr, and the exit code. `execve_pipeline` does the same but pipes stdout of each stage into stdin of the next. Most filesystem work uses `execve` (e.g. `cat`, `ls`, `mv`, `rm`). `write_file` covers creating and overwriting text without a shell; `patch_file` applies structured line patches. `env_set`/`env_delete` persist environment variables (credentials, API keys) that are automatically injected into every `execve` call. `memory_read`/`memory_write` give the AI persistent memory across conversations (`/data/MEMORY.md`). `get_instructions` returns the full system instructions for the MCP server.
+2. The server registers MCP tools: `shell`, `patch_file`, `env_set`, `env_delete`, `memory_read`, `memory_write`, `memory_append`, `memory_patch`, and `get_instructions`
+3. `shell` runs a bash command and returns stdout, stderr, and the exit code. Working directory and environment persist across calls. `patch_file` applies structured line patches to files. `env_set`/`env_delete` persist environment variables (credentials, API keys) that are automatically injected into every `shell` call. `memory_read`/`memory_write`/`memory_append`/`memory_patch` give the AI persistent memory across conversations (`/data/MEMORY.md`). `get_instructions` returns the full system instructions for the MCP server.
 4. OAuth state is saved to `/data/oauth-state.json` by default so tokens survive restarts; set `OAUTH_RESET_ON_RESTART=1` to use in-memory only
 
 ## Setup for the User
@@ -91,6 +91,7 @@ bun run format:check # Check formatting
 | `OAUTH_RESET_ON_RESTART` | No      | Set to `1` to disable OAuth state persistence. By default, state is saved to `/data/oauth-state.json` so tokens survive restarts. Not used when `USE_MCP_TOKEN_AUTH=1`. |
 | `USE_MCP_TOKEN_AUTH`    | No       | Set to `1` to use static bearer token auth instead of OAuth. Useful for local dev or non-browser MCP clients. |
 | `MCP_TOKEN`             | No       | Static bearer token (only used when `USE_MCP_TOKEN_AUTH=1`). Auto-generated to `.mcp-token` if unset.         |
+| `ALLOWED_REDIRECT_URI_DOMAINS` | No | Comma-separated list of domains OAuth clients are allowed to register redirect URIs for. Default: `claude.ai`. Set to `claude.ai,localhost` to also allow local clients. |
 
 ## Local Development
 

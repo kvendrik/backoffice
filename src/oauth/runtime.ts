@@ -204,7 +204,7 @@ export async function createOAuthRuntime(options: {
   resourceName?: string;
   authPassphrase?: string;
   stateFile?: string;
-  allowedRedirectUriPrefixes?: string[];
+  allowedRedirectUriDomains?: string[];
 }): Promise<OAuthRuntime> {
   const {
     issuerUrl,
@@ -212,7 +212,7 @@ export async function createOAuthRuntime(options: {
     resourceName = "filesystem-mcp",
     authPassphrase,
     stateFile,
-    allowedRedirectUriPrefixes = ["https://claude.ai/"],
+    allowedRedirectUriDomains = ["claude.ai"],
   } = options;
 
   const validateResource = (resource: URL | undefined): boolean => {
@@ -451,9 +451,15 @@ export async function createOAuthRuntime(options: {
         throw new InvalidClientMetadataError(parseResult.error.message);
       }
       const clientMetadata = parseResult.data;
-      const disallowed = clientMetadata.redirect_uris.find(
-        (uri) => !allowedRedirectUriPrefixes.some((prefix) => uri.startsWith(prefix)),
-      );
+      const disallowed = clientMetadata.redirect_uris.find((uri) => {
+        let hostname: string;
+        try {
+          hostname = new URL(uri).hostname;
+        } catch {
+          return true;
+        }
+        return !allowedRedirectUriDomains.includes(hostname);
+      });
       if (disallowed !== undefined) {
         throw new InvalidClientMetadataError(
           `redirect_uri not allowed: ${disallowed}`,

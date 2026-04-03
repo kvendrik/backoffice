@@ -71,7 +71,7 @@ Backoffice comes with full OAuth. Apps like Claude.ai handle the entire flow aut
 The OAuth consent screen requires a passphrase before issuing tokens. A passphrase is auto-generated on startup and printed to stdout. Set `AUTH_PASSPHRASE` to use your own.
 
 - **Persistent state (default).** Tokens are saved to `/data/oauth-state.json` and survive restarts and redeploys. Requires a `/data` Volume — see "Persisting Data" below. Set `OAUTH_RESET_ON_RESTART=1` to disable.
-- **In-memory state.** Set `OAUTH_RESET_ON_RESTART=1` to disable persistence. Tokens are lost on restart and apps like Claude.ai re-authenticate automatically.
+- **In-memory state.** Set `OAUTH_RESET_ON_RESTART=1` to use in-memory state instead. Tokens are lost on restart and apps like Claude.ai re-authenticate automatically.
 - **Short-lived tokens.** Access tokens expire every hour. Apps like Claude.ai refresh them automatically.
 
 ### Environment variables
@@ -79,7 +79,7 @@ The OAuth consent screen requires a passphrase before issuing tokens. A passphra
 | Variable | Default | Description |
 |---|---|---|
 | `AUTH_PASSPHRASE` | *(random, logged on startup)* | Passphrase required on the OAuth consent screen. Set this to a strong secret so it never appears in logs. |
-| `ALLOWED_REDIRECT_URI_PREFIXES` | `https://claude.ai/` | Comma-separated list of URI prefixes that OAuth clients are allowed to register. Registrations with a `redirect_uri` that doesn't match any prefix are rejected. Set to `https://claude.ai/,http://localhost:` to also allow local clients. |
+| `ALLOWED_REDIRECT_URI_DOMAINS` | `claude.ai` | Comma-separated list of domains that OAuth clients are allowed to register redirect URIs for. Registrations with a `redirect_uri` on a domain not in this list are rejected. Set to `claude.ai,localhost` to also allow local clients. |
 | `OAUTH_RESET_ON_RESTART` | `false` | Set to `1` to disable OAuth state persistence. Existing tokens are lost on restart and clients re-authenticate automatically. |
 | `USE_MCP_TOKEN_AUTH` | `false` | Set to `1` to replace OAuth with a single static bearer token. Simpler, but no per-client visibility in logs. The token is read from `MCP_TOKEN` or auto-generated and written to `.mcp-token`. |
 | `MCP_TOKEN` | *(auto-generated)* | Static bearer token. Only used when `USE_MCP_TOKEN_AUTH=1`. |
