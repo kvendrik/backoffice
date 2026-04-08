@@ -43,11 +43,24 @@ export function register(server: McpServer): void {
           .describe(
             "Max bytes captured per stream (stdout/stderr). Defaults to 1048576 (1 MB). Increase for commands that produce large output.",
           ),
+        background: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "Run the command in the background without waiting for it to complete. Returns immediately with the PID. No stdout/stderr is captured. Useful for long-running servers or daemons.",
+          ),
       },
     },
-    async ({ command, cwd, env, timeout_ms, max_output_bytes }) => {
+    async ({ command, cwd, env, timeout_ms, max_output_bytes, background }) => {
       const err = applySessionUpdates(session, cwd, env);
       if (err !== null) return formatError(err);
+      if (background) {
+        const pid = runBackground(command, session);
+        return {
+          content: [{ type: "text" as const, text: `cwd: ${session.cwd}\nStarted in background (PID: ${String(pid)})\n\nTo check if it's running: ps -p ${String(pid)}\nTo stop it: kill ${String(pid)}` }],
+        };
+      }
       const { stdout, stderr, code } = await runShell(command, session, timeout_ms, max_output_bytes);
       return formatResult(stdout, stderr, code, session);
     },
@@ -120,6 +133,17 @@ function cappedCollector(maxBytes: number) {
     return buf;
   };
   return { append, value };
+}
+
+function runBackground(command: string, session: Session): number {
+  const child = spawn("bash", ["-c", command], {
+    stdio: "ignore",
+    cwd: session.cwd,
+    env: sessionEnv(session),
+    detached: true,
+  });
+  child.unref();
+  return child.pid ?? -1;
 }
 
 function runShell(
