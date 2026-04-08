@@ -13,6 +13,7 @@ interface Session {
 }
 
 const JOBS_FILE = "/.background-jobs";
+const JOBS_FILE_FALLBACK = "/tmp/.background-jobs";
 
 interface BackgroundJob {
   id: number;
@@ -22,12 +23,28 @@ interface BackgroundJob {
   startedAt: string;
 }
 
+function isValidJob(j: unknown): j is BackgroundJob {
+  if (typeof j !== "object" || j === null) return false;
+  const o = j as Record<string, unknown>;
+  return (
+    typeof o["id"] === "number" &&
+    typeof o["pid"] === "number" &&
+    typeof o["command"] === "string" &&
+    typeof o["cwd"] === "string" &&
+    typeof o["startedAt"] === "string"
+  );
+}
+
 function readJobs(): BackgroundJob[] {
-  try {
-    return JSON.parse(readFileSync(JOBS_FILE, "utf8")) as BackgroundJob[];
-  } catch {
-    return [];
+  for (const path of [JOBS_FILE, JOBS_FILE_FALLBACK]) {
+    try {
+      const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+      if (Array.isArray(parsed)) return parsed.filter(isValidJob);
+    } catch {
+      // try next path
+    }
   }
+  return [];
 }
 
 function writeJobs(jobs: BackgroundJob[]): void {
@@ -35,7 +52,7 @@ function writeJobs(jobs: BackgroundJob[]): void {
     writeFileSync(JOBS_FILE, JSON.stringify(jobs, null, 2));
   } catch {
     // /tmp fallback if root isn't writable
-    writeFileSync(JOBS_FILE.replace("/.", "/tmp/."), JSON.stringify(jobs, null, 2));
+    writeFileSync(JOBS_FILE_FALLBACK, JSON.stringify(jobs, null, 2));
   }
 }
 
@@ -93,8 +110,9 @@ export function register(server: McpServer): void {
       if (err !== null) return formatError(err);
       if (background) {
         const pid = runBackground(command, session);
+        if (pid === -1) return formatError("Failed to start background process: spawn returned no PID");
         const jobs = readJobs();
-        const id = (jobs.length > 0 ? Math.max(...jobs.map((j) => j.id)) : 0) + 1;
+        const id = jobs.reduce((max, j) => Math.max(max, j.id), 0) + 1;
         jobs.push({ id, pid, command, cwd: session.cwd, startedAt: new Date().toISOString() });
         writeJobs(jobs);
         return {
@@ -110,7 +128,7 @@ export function register(server: McpServer): void {
     "shell_list_background_jobs",
     {
       description:
-        "Lists all background jobs started with shell(background: true). Automatically prunes jobs whose processes are no longer running.",
+        "Lists all background jobs started with shell(background: true). Automatically prunes jobs whose processes are no longer running. Jobs are persisted to /.background-jobs (fallback: /tmp/.background-jobs).",
       inputSchema: {},
     },
     () => {
@@ -119,7 +137,7 @@ export function register(server: McpServer): void {
       if (alive.length !== all.length) writeJobs(alive);
 
       if (alive.length === 0) {
-        return { content: [{ type: "text" as const, text: `No background jobs running.\n(Jobs file: ${JOBS_FILE})` }] };
+        return { content: [{ type: "text" as const, text: `No background jobs running.` }] };
       }
 
       const lines = ["BACKGROUND JOBS", "─".repeat(60)];
