@@ -222,51 +222,6 @@ async function handleMcpWithStaticToken(req: Request): Promise<Response> {
   return handleMcpSession(req, tokenSessions);
 }
 
-
-// ── File sharing ─────────────────────────────────────────────────────────────
-const SHARE_STORE = "/data/sharing/store.json";
-const MIME: Record<string, string> = {
-  png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
-  webp: "image/webp", svg: "image/svg+xml", pdf: "application/pdf",
-  txt: "text/plain", md: "text/markdown", csv: "text/csv",
-  json: "application/json", html: "text/html",
-  zip: "application/zip", gz: "application/gzip", tar: "application/x-tar",
-  mp3: "audio/mpeg", mp4: "video/mp4", wav: "audio/wav",
-};
-
-function handleShare(_req: Request, url: URL): Response | null {
-  const m = /^\/share\/([a-f0-9]{64})$/.exec(url.pathname);
-  if (!m) return null;
-  const token = m[1]!;
-
-  let store: Record<string, { filePath: string; filename: string; expiresAt: number }> = {};
-  try { store = JSON.parse(require("fs").readFileSync(SHARE_STORE, "utf8")); } catch { /* no store */ }
-
-  const entry = store[token];
-  if (!entry || Date.now() > entry.expiresAt) {
-    delete store[token];
-    try { require("fs").writeFileSync(SHARE_STORE, JSON.stringify(store)); } catch { /* ok */ }
-    return new Response("<html><body><h2>Link expired or invalid.</h2></body></html>",
-      { status: 410, headers: { "Content-Type": "text/html" } });
-  }
-
-  // Single-use: remove token immediately
-  delete store[token];
-  try { require("fs").writeFileSync(SHARE_STORE, JSON.stringify(store)); } catch { /* ok */ }
-
-  const ext = entry.filename.split(".").pop()?.toLowerCase() ?? "";
-  const mime = MIME[ext] ?? "application/octet-stream";
-
-  return new Response(Bun.file(entry.filePath), {
-    status: 200,
-    headers: {
-      "Content-Type": mime,
-      "Content-Disposition": `attachment; filename="${entry.filename}"`,
-      "Cache-Control": "no-store",
-    },
-  });
-}
-
 Bun.serve({
   port: listenPort,
   hostname: "0.0.0.0",
@@ -293,9 +248,6 @@ Bun.serve({
       }
       return handleMcpWithOAuth(req);
     }
-
-    const shareRes = handleShare(req, url);
-    if (shareRes !== null) return shareRes;
 
     return new Response("Not found", { status: 404 });
   },
