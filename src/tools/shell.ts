@@ -12,9 +12,9 @@ interface Session {
   env: Record<string, string>;
 }
 
-export const JOBS_FILE = "/.background-jobs";
+const JOBS_FILE = "/.background-jobs";
 
-export interface BackgroundJob {
+interface BackgroundJob {
   id: number;
   pid: number;
   command: string;
@@ -22,7 +22,7 @@ export interface BackgroundJob {
   startedAt: string;
 }
 
-export function readJobs(): BackgroundJob[] {
+function readJobs(): BackgroundJob[] {
   try {
     return JSON.parse(readFileSync(JOBS_FILE, "utf8")) as BackgroundJob[];
   } catch {
@@ -30,12 +30,21 @@ export function readJobs(): BackgroundJob[] {
   }
 }
 
-export function writeJobs(jobs: BackgroundJob[]): void {
+function writeJobs(jobs: BackgroundJob[]): void {
   try {
     writeFileSync(JOBS_FILE, JSON.stringify(jobs, null, 2));
   } catch {
     // /tmp fallback if root isn't writable
     writeFileSync(JOBS_FILE.replace("/.", "/tmp/."), JSON.stringify(jobs, null, 2));
+  }
+}
+
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -94,6 +103,36 @@ export function register(server: McpServer): void {
       }
       const { stdout, stderr, code } = await runShell(command, session, timeout_ms, max_output_bytes);
       return formatResult(stdout, stderr, code, session);
+    },
+  );
+
+  server.registerTool(
+    "shell_list_background_jobs",
+    {
+      description:
+        "Lists all background jobs started with shell(background: true). Automatically prunes jobs whose processes are no longer running.",
+      inputSchema: {},
+    },
+    () => {
+      const all = readJobs();
+      const alive = all.filter((j) => isAlive(j.pid));
+      if (alive.length !== all.length) writeJobs(alive);
+
+      if (alive.length === 0) {
+        return { content: [{ type: "text" as const, text: `No background jobs running.\n(Jobs file: ${JOBS_FILE})` }] };
+      }
+
+      const lines = ["BACKGROUND JOBS", "─".repeat(60)];
+      for (const j of alive) {
+        const started = new Date(j.startedAt).toLocaleString();
+        lines.push(`[${String(j.id)}] PID ${String(j.pid)}  started ${started}`);
+        lines.push(`    ${j.command}`);
+        lines.push(`    cwd: ${j.cwd}`);
+      }
+      lines.push("─".repeat(60));
+      lines.push(`${String(alive.length)} job(s) running  ·  To stop: kill <PID>`);
+
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
     },
   );
 }
