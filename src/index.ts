@@ -8,7 +8,6 @@ import { version } from "../package.json" with { type: "json" };
 import { createMcpServer, mcpCorsHeaders, withCors } from "./mcp";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createOAuthRuntime, InMemoryEventStore } from "./oauth";
-import { getFile, deleteToken } from "./sharing";
 
 const portEnv = process.env["PORT"];
 const port = portEnv !== undefined && portEnv !== "" ? Number(portEnv) : 3000;
@@ -223,54 +222,6 @@ async function handleMcpWithStaticToken(req: Request): Promise<Response> {
   return handleMcpSession(req, tokenSessions);
 }
 
-
-// ── MIME type helper ─────────────────────────────────────────────────────────
-const MIME_TYPES: Record<string, string> = {
-  png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
-  gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
-  ico: "image/x-icon", pdf: "application/pdf",
-  txt: "text/plain", md: "text/markdown", csv: "text/csv",
-  html: "text/html", css: "text/css", js: "text/javascript",
-  ts: "text/typescript", json: "application/json",
-  zip: "application/zip", gz: "application/gzip", tar: "application/x-tar",
-  mp3: "audio/mpeg", mp4: "video/mp4", wav: "audio/wav",
-};
-
-function getMimeType(filename: string): string {
-  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
-  return MIME_TYPES[ext] ?? "application/octet-stream";
-}
-
-function handleShareRequest(_req: Request, url: URL): Response | null {
-  const match = /^\/share\/([a-f0-9]{64})$/.exec(url.pathname);
-  if (match === null) return null;
-  const token = match[1];
-  if (token === undefined) return null;
-
-  const entry = getFile(token);
-  if (entry === null) {
-    return new Response(
-      "<html><body><h2>Link expired or invalid.</h2><p>File links expire after 10 minutes.</p></body></html>",
-      { status: 410, headers: { "Content-Type": "text/html" } },
-    );
-  }
-
-  // Single-use: delete token immediately on serve
-  deleteToken(token);
-
-  const file = Bun.file(entry.filePath);
-  const mime = getMimeType(entry.filename);
-
-  return new Response(file, {
-    status: 200,
-    headers: {
-      "Content-Type": mime,
-      "Content-Disposition": `attachment; filename="${entry.filename}"`,
-      "Cache-Control": "no-store",
-    },
-  });
-}
-
 Bun.serve({
   port: listenPort,
   hostname: "0.0.0.0",
@@ -297,9 +248,6 @@ Bun.serve({
       }
       return handleMcpWithOAuth(req);
     }
-
-    const shareRes = handleShareRequest(req, url);
-    if (shareRes !== null) return shareRes;
 
     return new Response("Not found", { status: 404 });
   },

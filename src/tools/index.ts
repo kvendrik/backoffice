@@ -8,7 +8,6 @@ import { register as registerPatch } from "./patch";
 import { register as registerEnv } from "./env";
 import { register as registerMemory } from "./memory";
 import { register as registerInstructions } from "./instructions";
-import { register as registerShare } from "./share";
 
 export function create(server: McpServer): void {
   applyLogging(server);
@@ -17,7 +16,6 @@ export function create(server: McpServer): void {
   registerEnv(server);
   registerMemory(server);
   registerInstructions(server);
-  registerShare(server);
 }
 
 const LOG_FILE = path.join("/data", "log.jsonl");
