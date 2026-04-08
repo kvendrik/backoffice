@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, statSync, readFileSync, writeFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod";
 import { getAll as getPersistedEnv } from "./env";
@@ -10,6 +10,33 @@ const DEFAULT_MAX_OUTPUT_BYTES = 1_048_576; // 1 MB
 interface Session {
   cwd: string;
   env: Record<string, string>;
+}
+
+export const JOBS_FILE = "/.background-jobs";
+
+export interface BackgroundJob {
+  id: number;
+  pid: number;
+  command: string;
+  cwd: string;
+  startedAt: string;
+}
+
+export function readJobs(): BackgroundJob[] {
+  try {
+    return JSON.parse(readFileSync(JOBS_FILE, "utf8")) as BackgroundJob[];
+  } catch {
+    return [];
+  }
+}
+
+export function writeJobs(jobs: BackgroundJob[]): void {
+  try {
+    writeFileSync(JOBS_FILE, JSON.stringify(jobs, null, 2));
+  } catch {
+    // /tmp fallback if root isn't writable
+    writeFileSync(JOBS_FILE.replace("/.", "/tmp/."), JSON.stringify(jobs, null, 2));
+  }
 }
 
 export function register(server: McpServer): void {
@@ -57,8 +84,12 @@ export function register(server: McpServer): void {
       if (err !== null) return formatError(err);
       if (background) {
         const pid = runBackground(command, session);
+        const jobs = readJobs();
+        const id = (jobs.length > 0 ? Math.max(...jobs.map((j) => j.id)) : 0) + 1;
+        jobs.push({ id, pid, command, cwd: session.cwd, startedAt: new Date().toISOString() });
+        writeJobs(jobs);
         return {
-          content: [{ type: "text" as const, text: `cwd: ${session.cwd}\nStarted in background (PID: ${String(pid)})\n\nTo check if it's running: ps -p ${String(pid)}\nTo stop it: kill ${String(pid)}` }],
+          content: [{ type: "text" as const, text: `cwd: ${session.cwd}\nStarted in background [job ${String(id)}] (PID: ${String(pid)})\n\nUse shell_list_background_jobs to see all running jobs.\nTo stop: kill ${String(pid)}` }],
         };
       }
       const { stdout, stderr, code } = await runShell(command, session, timeout_ms, max_output_bytes);
