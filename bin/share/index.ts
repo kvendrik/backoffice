@@ -28,8 +28,10 @@ import { SOCKET_PATH } from "../../src/rpc.js";
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_PORT = parseInt(process.env["SHARE_PORT"] ?? "3001");
-const DEFAULT_MINUTES = 10;
+const DEFAULT_MINUTES = 5;
+const MAX_MINUTES = 20;
 const DEFAULT_TIMES = 1;
+const MAX_TIMES = 3;
 const DEFAULT_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 const CLEANUP_INTERVAL_MS = 60_000;
 
@@ -51,7 +53,7 @@ const MIME: Record<string, string> = {
   ".tar":  "application/x-tar",
   ".gz":   "application/gzip",
   // Data / web (non-sensitive formats only)
-  ".html": "text/html",
+  ".html": "application/octet-stream",  // force download; prevent JS execution in browser
   ".csv":  "text/csv",
   // Media
   ".mp4":  "video/mp4",
@@ -123,7 +125,7 @@ USAGE
   bun /app/bin/share rm <token|path>          Revoke a link by token prefix or file path
 
 ADD FLAGS
-  --minutes <n>                  Link lifetime in minutes (default: ${String(DEFAULT_MINUTES)}, max: 60)
+  --minutes <n>                  Link lifetime in minutes (default: ${String(DEFAULT_MINUTES)}, max: ${String(MAX_MINUTES)})
   --times <n>                    Max downloads before expiry (default: ${String(DEFAULT_TIMES)})
   --delete-after                 Delete source file after final download
   --max-size <bytes>             Reject files larger than this (default: 100MB)
@@ -234,21 +236,31 @@ function handleRequest(req: Request): Response {
     return new Response("File no longer available", { status: 410, headers: SECURE_HEADERS });
   }
 
-  entry.usesRemaining -= 1;
-  const isLastDownload = entry.usesRemaining <= 0;
+  // Re-read store immediately before write to narrow race window on concurrent requests
+  const freshStore = readStore();
+  const freshEntry = freshStore[token];
+  if (!freshEntry || freshEntry.usesRemaining <= 0 || freshEntry.expiresAt <= Date.now()) {
+    return new Response("Link expired", { status: 410, headers: SECURE_HEADERS });
+  }
+  freshEntry.usesRemaining -= 1;
+  const isLastDownload = freshEntry.usesRemaining <= 0;
 
   if (isLastDownload) {
-    delete store[token];
+    delete freshStore[token];
   } else {
-    store[token] = entry;
+    freshStore[token] = freshEntry;
   }
-  writeStore(store);
+  writeStore(freshStore);
+  // Reassign entry for deleteAfter logic below
+  Object.assign(entry, freshEntry);
 
   if (isLastDownload && entry.deleteAfter) {
     try { unlinkSync(entry.filePath); } catch { /* best effort */ }
   }
 
-  const fileName = entry.filePath.split("/").pop() ?? "file";
+  const rawName = entry.filePath.split("/").pop() ?? "file";
+  // Strip quotes and control chars to prevent Content-Disposition header injection
+  const fileName = rawName.replace(/[\x00-\x1f"\\]/g, "_");
   const file = Bun.file(entry.filePath);
 
   return new Response(file, {
@@ -310,13 +322,13 @@ async function cmdAdd(argv: string[]): Promise<void> {
     process.exit(1);
   }
 
-  if (minutes < 1 || minutes > 60) {
-    console.error("Error: --minutes must be between 1 and 60");
+  if (minutes < 1 || minutes > MAX_MINUTES) {
+    console.error(`Error: --minutes must be between 1 and ${String(MAX_MINUTES)}`);
     process.exit(1);
   }
 
-  if (times < 1) {
-    console.error("Error: --times must be at least 1");
+  if (times < 1 || times > MAX_TIMES) {
+    console.error(`Error: --times must be between 1 and ${String(MAX_TIMES)}`);
     process.exit(1);
   }
 
