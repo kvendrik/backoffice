@@ -5,7 +5,7 @@ description: Share files with the user via a short-lived tokenized download link
 
 # Share Skill
 
-Use this to hand files to the user via a temporary download link. The share server runs on port 3001 and serves files at `$SHARE_PUBLIC_URL/share/<token>`.
+Use this to hand files to the user via a temporary download link. The share server runs locally on port 3001 and registers `/share` with the MCP server so links are served via the main Railway domain.
 
 ---
 
@@ -102,5 +102,5 @@ bun /app/bin/share -h
 - `share add` checks that the server is running before registering — if it fails, start the server first
 - Links expire by time OR download count, whichever comes first
 - `--delete-after` only triggers on the final counted download; time-based expiry does NOT delete the file
-- The public URL comes from the `SHARE_PUBLIC_URL` env var — if unset, URLs show `http://localhost:3001` (only useful for local testing)
+- The public URL is derived from `RAILWAY_PUBLIC_DOMAIN` (set automatically by Railway) — if unset, URLs show `http://localhost:3001`
 - Files outside `/data/`, `/tmp/`, `/var/tmp/` are rejected — always move them first
