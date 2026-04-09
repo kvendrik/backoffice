@@ -6,6 +6,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Command } from "commander";
+process.env["MCP_USE_ANONYMIZED_TELEMETRY"] = "false";
 import { MCPAgent, MCPClient } from "mcp-use";
 
 const program = new Command()
@@ -27,7 +28,17 @@ async function resolvePrompt(): Promise<string> {
   return text;
 }
 
+const API_KEY_ENV: Record<string, string> = {
+  anthropic: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+};
+
 async function createLLM(provider: string, model: string) {
+  const envVar = API_KEY_ENV[provider];
+  if (envVar !== undefined && !process.env[envVar]) {
+    console.error(`Error: ${envVar} is not set. Export it and try again.`);
+    process.exit(1);
+  }
   switch (provider) {
     case "anthropic": {
       const { ChatAnthropic } = await import("@langchain/anthropic");
