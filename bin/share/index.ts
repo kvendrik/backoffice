@@ -238,15 +238,23 @@ function handleRequest(req: Request): Response {
     return new Response("File no longer available", { status: 410, headers: SECURE_HEADERS });
   }
 
-  entry.usesRemaining -= 1;
-  const isLastDownload = entry.usesRemaining <= 0;
+  // Re-read store immediately before write to narrow race window on concurrent requests
+  const freshStore = readStore();
+  const freshEntry = freshStore[token];
+  if (!freshEntry || freshEntry.usesRemaining <= 0 || freshEntry.expiresAt <= Date.now()) {
+    return new Response("Link expired", { status: 410, headers: SECURE_HEADERS });
+  }
+  freshEntry.usesRemaining -= 1;
+  const isLastDownload = freshEntry.usesRemaining <= 0;
 
   if (isLastDownload) {
-    delete store[token];
+    delete freshStore[token];
   } else {
-    store[token] = entry;
+    freshStore[token] = freshEntry;
   }
-  writeStore(store);
+  writeStore(freshStore);
+  // Reassign entry for deleteAfter logic below
+  Object.assign(entry, freshEntry);
 
   if (isLastDownload && entry.deleteAfter) {
     try { unlinkSync(entry.filePath); } catch { /* best effort */ }
