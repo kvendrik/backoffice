@@ -1,27 +1,24 @@
 # Webhook Skill
 
 Registers HTTP endpoints that fire a shell command when a valid signed request arrives.
+The webhook server starts automatically with Backoffice — no manual start needed.
 
 ## Quick Start
 
 ```bash
-# 1. Start the server (once per session, background: true)
-bun /app/skills/webhook server
-
-# 2. Register an endpoint
+# Register an endpoint
 bun /app/skills/webhook register \
   --secret mysecret \
   --cmd "bun /data/handle.ts" \
   --name "my-hook"
 
-# 3. Paste the printed URL into your webhook sender (GitHub, Shopify, etc.)
+# Paste the printed URL into your webhook sender (GitHub, Shopify, etc.)
 ```
 
 ## Subcommands
 
 | Command | Description |
 |---|---|
-| `server` | Start HTTP server on port 3002 (always `background: true`) |
 | `register` | Register a new endpoint, print its public URL |
 | `list` | Show all registered endpoints |
 | `rm <id>` | Unregister by ID prefix |
@@ -73,11 +70,9 @@ bun /app/skills/webhook register --secret <secret> --cmd "bun /data/handle.ts" \
 
 ## Storage
 
-Registrations persist to `/data/webhooks/registrations.json` — survives container restarts. Server re-registers all routes on startup.
+Registrations persist to `/data/webhooks/registrations.json` — survives container restarts.
+The server restores all endpoints automatically on startup by reading this file.
 
-The replay-detection store (`/tmp/webhooks/seen.json`) is ephemeral — lost on restart, which is acceptable.
-
-- `/tmp/webhooks/registrations.json`
-- `/tmp/webhooks/seen.json`
+The replay-detection store (`/tmp/webhooks/seen.json`) is ephemeral — acceptable to lose on restart.
 
 Body size limit: 64 KB. Port: `3002` (override with `WEBHOOK_PORT` env var).
