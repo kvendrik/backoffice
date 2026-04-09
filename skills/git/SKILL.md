@@ -4,7 +4,7 @@ Use this skill for any git operations across the two repos.
 
 ## ⚠️ CRITICAL RULES
 
-1. **ALWAYS ask permission before pushing** — never run `git push` without explicit approval from Koen first
+1. **ALWAYS ask permission before pushing** — never run `git push` without explicit approval from the user first
 2. **NEVER modify `/data/source/` without asking first** — see source modification rule in MEMORY.md
 3. Show a summary of what will be pushed and wait for a "yes" before running the push command
 
@@ -18,7 +18,7 @@ Use this skill for any git operations across the two repos.
 ## Environment
 
 - Always set `GIT_SSL_CAINFO=/data/cacert.pem` for any git network operation (push, pull, fetch, clone)
-- Git user already configured in `/data/source` — for `/data` may need: `git config user.email "k.vendrik@gmail.com"`
+- Git user already configured in `/data/source` — for `/data` may need: `git config user.email "$(git -C /data/source config user.email)"`
 
 ## Common Workflows
 
@@ -66,7 +66,7 @@ cd /data/source && git revert <hash> --no-edit
 1. Make the changes
 2. Run `git status` / `git diff --staged` — review what will change
 3. Commit locally
-4. Run `git status --short` and show the output to Koen
+4. Run `git status --short` and show the output to the user
 5. **Ask**: "Ready to push to [repo] — shall I go ahead?"
 6. Only push after a clear yes
 

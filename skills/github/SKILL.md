@@ -110,7 +110,7 @@ SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/bins/gh api \
 
 1. Create a feature branch: `git checkout -b <branch-name>`
 2. Make changes, run `bun run test` to verify
-3. Commit and push the branch (ask Koen first — see git skill)
+3. Commit and push the branch (ask the user first — see git skill)
 4. Open a PR with `gh pr create`
 5. Check CI with `gh pr checks <number>`
 
@@ -137,17 +137,17 @@ PR=2
 REPO=OWNER/REPO
 
 # (a) Issue comments — top-level thread
-SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/bins/gh api \
   repos/$REPO/issues/$PR/comments \
   --jq '[.[] | select(.body | ascii_downcase | contains("&backoffice"))] | .[] | {user: .user.login, body, url: .html_url}'
 
 # (b) Review comments — inline code comments
-SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/bins/gh api \
   repos/$REPO/pulls/$PR/comments \
   --jq '[.[] | select(.body | ascii_downcase | contains("&backoffice"))] | .[] | {user: .user.login, body, url: .html_url}'
 
 # (c) Reviews — overall review submissions
-SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/bins/gh api \
   repos/$REPO/pulls/$PR/reviews \
   --jq '[.[] | select(.body | ascii_downcase | contains("&backoffice"))] | .[] | {user: .user.login, body, state, url: .html_url}'
 ```
@@ -162,11 +162,11 @@ For each mention, classify and act:
 | FYI / no action needed | Acknowledge, no further action |
 | Already replied | Skip |
 
-Always read surrounding thread context first — don't reply to something already addressed. **Show any draft reply to Koen and wait for approval before posting.**
+Always read surrounding thread context first — don't reply to something already addressed. **Show any draft reply to the user and wait for approval before posting.**
 
 ```bash
 # Post a reply to a PR thread
-SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/bins/gh api \
   repos/$REPO/issues/$PR/comments \
   --method POST \
   --field body='Your reply here' \

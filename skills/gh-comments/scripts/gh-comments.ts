@@ -67,7 +67,7 @@ if (!GITHUB_TOKEN) { console.error("GITHUB_TOKEN env var is required"); process.
 const SSL_CERT_FILE    = process.env.SSL_CERT_FILE ?? "/data/cacert.pem";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID   = process.env.TELEGRAM_CHAT_ID;
-const GH = "/data/gh";
+const GH = "/data/bins/gh";
 
 // ── State ─────────────────────────────────────────────────────────────────────
 

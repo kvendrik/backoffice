@@ -1,6 +1,13 @@
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 
 const LOG_PATH = "/data/log.jsonl";
+
+if (!existsSync(LOG_PATH)) {
+  console.log("=== Backoffice Self-Improvement Analysis ===");
+  console.log("No log file found at", LOG_PATH);
+  console.log("Nothing to analyze yet — log is created after the first conversation.");
+  process.exit(0);
+}
 
 const lines = readFileSync(LOG_PATH, "utf8").trim().split("\n");
 const entries = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);

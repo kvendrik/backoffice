@@ -46,8 +46,8 @@ bun /app/skills/share add <path> [flags]
 
 | Flag | Default | Description |
 |---|---|---|
-| `--minutes <n>` | `10` | Link lifetime (max 60) |
-| `--times <n>` | `1` | Max downloads before expiry |
+| `--minutes <n>` | `5` | Link lifetime (max 20) |
+| `--times <n>` | `1` | Max downloads before expiry (max 3) |
 | `--delete-after` | off | Delete source file after final download |
 | `--max-size <bytes>` | 100MB | Reject if file exceeds this size |
 
@@ -58,7 +58,7 @@ bun /app/skills/share add <path> [flags]
 ```bash
 # Move generated file into a safe location and share it
 cp /home/claude/report.pdf /tmp/report.pdf
-bun /app/skills/share add /tmp/report.pdf --minutes 15
+bun /app/skills/share add /tmp/report.pdf --minutes 15  # max 20
 ```
 
 Output:

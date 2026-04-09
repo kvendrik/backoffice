@@ -44,15 +44,17 @@ Choose mechanism based on root cause:
 
 **Code fix** — issue in Backoffice source (`/app/src/`), requires `GITHUB_TOKEN`:
 ```bash
-git clone https://$GITHUB_TOKEN@github.com/kvendrik/backoffice.git /tmp/backoffice-clone
+git clone https://$GITHUB_TOKEN@github.com/$(SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/bins/gh api user --jq '.login')/backoffice.git /tmp/backoffice-clone
 # edit file
 cd /tmp/backoffice-clone
 git config user.email "backoffice@railway.app"
 git config user.name "Backoffice"
 git add -A
 git commit -m "fix: <description>"
-git push
+# ── ASK PERMISSION BEFORE THIS LINE ──
+# Show the user the commit and wait for explicit approval before pushing.
 # Note: push triggers Railway redeploy — current session will die. Expected.
+GIT_SSL_CAINFO=/data/cacert.pem git push
 ```
 
 ---

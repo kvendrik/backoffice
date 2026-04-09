@@ -134,8 +134,9 @@ Patterns are cloned from the fabric GitHub repo. To update to the latest:
 ```bash
 GIT_SSL_CAINFO=/data/cacert.pem git clone --depth=1 --filter=blob:none --sparse \
   https://github.com/danielmiessler/fabric.git /tmp/fabric-repo-update
-cd /tmp/fabric-repo-update && git sparse-checkout set data/patterns
-cp -r /tmp/fabric-repo-update/data/patterns/* /data/fabric/patterns/
+cd /tmp/fabric-repo-update && git sparse-checkout set patterns
+cp -r /tmp/fabric-repo-update/patterns/* /data/fabric/patterns/
+rm -rf /tmp/fabric-repo-update
 ```
 
 ## Key Rules
