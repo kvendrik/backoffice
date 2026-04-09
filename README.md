@@ -125,7 +125,7 @@ Packages installed via `bun install -g` go to `/data/bun` and packages installed
 
 ## Skills
 
-Backoffice ships with a bunch of [`AgentSkills`](https://agentskills.io/). It also adds new skills in `/data/skills` when you ask for it.
+Backoffice [ships](/skills) with a bunch of [`AgentSkills`](https://agentskills.io/). It also adds new skills in `/data/skills` when you ask for it.
 
 | Skill | What it does |
 | --- | --- |
