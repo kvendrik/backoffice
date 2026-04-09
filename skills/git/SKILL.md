@@ -1,3 +1,8 @@
+---
+name: git
+description: Git operations across the two repos (volume and source) — commits, branches, pushes, and the mandatory workflow rules.
+---
+
 # Git Skill
 
 Use this skill for any git operations across the two repos.

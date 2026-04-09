@@ -1,3 +1,8 @@
+---
+name: auto-research
+description: Research a topic autonomously, run iterative experiments, self-improve, or investigate a problem deeply without step-by-step human involvement.
+---
+
 # Auto-Research Skill
 
 Use this skill when asked to research a topic autonomously, run iterative experiments, self-improve, or investigate a problem deeply without step-by-step human involvement.

@@ -9,6 +9,7 @@ import { createMcpServer, mcpCorsHeaders, withCors } from "./mcp";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createOAuthRuntime, InMemoryEventStore } from "./oauth";
 import { startRpcServer, routeRegistry } from "./rpc";
+import { startCron } from "./cron";
 
 const portEnv = process.env["PORT"];
 const port = portEnv !== undefined && portEnv !== "" ? Number(portEnv) : 3000;
@@ -275,6 +276,7 @@ If you’re using Railway:
 }
 
 console.log(`http://0.0.0.0:${String(listenPort)} → https://${issuerUrl.host}`);
+startCron();
 
 if (USE_MCP_TOKEN_AUTH) {
   console.log("");
