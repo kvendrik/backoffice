@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, statSync, readFileSync, writeFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod";
 import { getAll as getPersistedEnv } from "./env";
@@ -10,6 +10,59 @@ const DEFAULT_MAX_OUTPUT_BYTES = 1_048_576; // 1 MB
 interface Session {
   cwd: string;
   env: Record<string, string>;
+}
+
+const JOBS_FILE = "/.background-jobs";
+const JOBS_FILE_FALLBACK = "/tmp/.background-jobs";
+
+interface BackgroundJob {
+  id: number;
+  pid: number;
+  command: string;
+  cwd: string;
+  startedAt: string;
+}
+
+function isValidJob(j: unknown): j is BackgroundJob {
+  if (typeof j !== "object" || j === null) return false;
+  const o = j as Record<string, unknown>;
+  return (
+    typeof o["id"] === "number" &&
+    typeof o["pid"] === "number" &&
+    typeof o["command"] === "string" &&
+    typeof o["cwd"] === "string" &&
+    typeof o["startedAt"] === "string"
+  );
+}
+
+function readJobs(): BackgroundJob[] {
+  for (const path of [JOBS_FILE, JOBS_FILE_FALLBACK]) {
+    try {
+      const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+      if (Array.isArray(parsed)) return parsed.filter(isValidJob);
+    } catch {
+      // try next path
+    }
+  }
+  return [];
+}
+
+function writeJobs(jobs: BackgroundJob[]): void {
+  try {
+    writeFileSync(JOBS_FILE, JSON.stringify(jobs, null, 2));
+  } catch {
+    // /tmp fallback if root isn't writable
+    writeFileSync(JOBS_FILE_FALLBACK, JSON.stringify(jobs, null, 2));
+  }
+}
+
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function register(server: McpServer): void {
@@ -43,13 +96,61 @@ export function register(server: McpServer): void {
           .describe(
             "Max bytes captured per stream (stdout/stderr). Defaults to 1048576 (1 MB). Increase for commands that produce large output.",
           ),
+        background: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "Run the command in the background without waiting for it to complete. Returns immediately with the PID. No stdout/stderr is captured. Useful for long-running servers or daemons.",
+          ),
       },
     },
-    async ({ command, cwd, env, timeout_ms, max_output_bytes }) => {
+    async ({ command, cwd, env, timeout_ms, max_output_bytes, background }) => {
       const err = applySessionUpdates(session, cwd, env);
       if (err !== null) return formatError(err);
+      if (background) {
+        const pid = runBackground(command, session);
+        if (pid === -1) return formatError("Failed to start background process: spawn returned no PID");
+        const jobs = readJobs();
+        const id = jobs.reduce((max, j) => Math.max(max, j.id), 0) + 1;
+        jobs.push({ id, pid, command, cwd: session.cwd, startedAt: new Date().toISOString() });
+        writeJobs(jobs);
+        return {
+          content: [{ type: "text" as const, text: `cwd: ${session.cwd}\nStarted in background [job ${String(id)}] (PID: ${String(pid)})\n\nUse shell_list_background_jobs to see all running jobs.\nTo stop: kill ${String(pid)}` }],
+        };
+      }
       const { stdout, stderr, code } = await runShell(command, session, timeout_ms, max_output_bytes);
       return formatResult(stdout, stderr, code, session);
+    },
+  );
+
+  server.registerTool(
+    "shell_list_background_jobs",
+    {
+      description:
+        "Lists all background jobs started with shell(background: true). Automatically prunes jobs whose processes are no longer running. Jobs are persisted to /.background-jobs (fallback: /tmp/.background-jobs).",
+      inputSchema: {},
+    },
+    () => {
+      const all = readJobs();
+      const alive = all.filter((j) => isAlive(j.pid));
+      if (alive.length !== all.length) writeJobs(alive);
+
+      if (alive.length === 0) {
+        return { content: [{ type: "text" as const, text: `No background jobs running.` }] };
+      }
+
+      const lines = ["BACKGROUND JOBS", "─".repeat(60)];
+      for (const j of alive) {
+        const started = new Date(j.startedAt).toLocaleString();
+        lines.push(`[${String(j.id)}] PID ${String(j.pid)}  started ${started}`);
+        lines.push(`    ${j.command}`);
+        lines.push(`    cwd: ${j.cwd}`);
+      }
+      lines.push("─".repeat(60));
+      lines.push(`${String(alive.length)} job(s) running  ·  To stop: kill <PID>`);
+
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
     },
   );
 }
@@ -120,6 +221,17 @@ function cappedCollector(maxBytes: number) {
     return buf;
   };
   return { append, value };
+}
+
+function runBackground(command: string, session: Session): number {
+  const child = spawn("bash", ["-c", command], {
+    stdio: "ignore",
+    cwd: session.cwd,
+    env: sessionEnv(session),
+    detached: true,
+  });
+  child.unref();
+  return child.pid ?? -1;
 }
 
 function runShell(
