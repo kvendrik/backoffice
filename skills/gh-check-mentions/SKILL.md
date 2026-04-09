@@ -1,11 +1,11 @@
 ---
 name: gh-check-mentions
-description: Scan open PRs across Backoffice repos for comments containing "&backoffice" that need a reply or action. Run this when asked to check mentions, check PRs, or check if there's anything to respond to on GitHub.
+description: Scan open PRs in a GitHub repo for comments containing "&backoffice" that need a reply or action. Run this when asked to check mentions, check PRs, or check if there's anything to respond to on GitHub.
 ---
 
 # gh-check-mentions Skill
 
-Scans all open PRs in the Backoffice repos for comments mentioning `&backoffice`, then summarises what needs a reply or action.
+Scans all open PRs in a given repo for comments mentioning `&backoffice`, then summarises what needs a reply or action.
 
 ---
 
@@ -15,25 +15,15 @@ The mention handle is `&backoffice` — not `@backoffice` (which would tag a rea
 
 ---
 
-## Repos to Check
-
-| Repo | Purpose |
-|---|---|
-| `kvendrik/backoffice` | Source repo (public) |
-| `kvendrik/backoffice-volume` | Volume repo (private) |
-
----
-
 ## How to Run
 
-### 1. Fetch open PRs for each repo
+The user will tell you which repo(s) to scan. Use `OWNER/REPO` format throughout.
+
+### 1. Fetch open PR numbers
 
 ```bash
-GH="SSL_CERT_FILE=/data/cacert.pem GH_TOKEN=\"$GITHUB_TOKEN\" /data/gh"
-
-# Get open PR numbers
-eval "$GH api repos/kvendrik/backoffice/pulls --jq '.[].number'"
-eval "$GH api repos/kvendrik/backoffice-volume/pulls --jq '.[].number'"
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
+  repos/OWNER/REPO/pulls --jq '.[].number'
 ```
 
 ### 2. For each open PR, fetch all comment types
@@ -42,7 +32,7 @@ GitHub has three comment streams per PR — check all of them:
 
 ```bash
 PR=2
-REPO=kvendrik/backoffice
+REPO=OWNER/REPO
 
 # (a) Issue comments — top-level conversation thread
 SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
@@ -59,12 +49,11 @@ SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
 
 ### 3. Filter for `&backoffice`
 
-Only surface comments whose `body` contains the string `&backoffice` (case-insensitive). Skip empty bodies.
+Only surface comments whose `body` contains `&backoffice` (case-insensitive). Skip empty bodies.
 
 ```bash
-# Combined fetch + filter for one PR (issue comments example)
 SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
-  repos/kvendrik/backoffice/issues/2/comments \
+  repos/$REPO/issues/$PR/comments \
   --jq '[.[] | select(.body | ascii_downcase | contains("&backoffice"))] | .[] | {user: .user.login, body, url: .html_url}'
 ```
 
@@ -75,17 +64,14 @@ SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
 After scanning, present a summary like:
 
 ```
-=== Mention Check — kvendrik/backoffice ===
+=== Mention Check — OWNER/REPO ===
 
 PR #2 — feat: add share CLI
   [issue comment] kvendrik  →  "...&backoffice can you double-check the token expiry logic?"
-  URL: https://github.com/kvendrik/backoffice/pull/2#issuecomment-...
+  URL: https://github.com/OWNER/REPO/pull/2#issuecomment-...
 
 PR #3 — feat: bundle skills into source repo
   No mentions.
-
-=== kvendrik/backoffice-volume ===
-  No open PRs.
 ```
 
 ---
@@ -109,9 +95,8 @@ Always read the surrounding thread context before deciding — a mention may alr
 ## Replying to a Comment
 
 ```bash
-# Reply to an issue comment thread on a PR
 SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
-  repos/kvendrik/backoffice/issues/2/comments \
+  repos/$REPO/issues/$PR/comments \
   --method POST \
   --field body='Your reply here' \
   --jq '.html_url'
@@ -126,4 +111,4 @@ SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
 - `gh pr view --comments` only shows issue comments — use the three-endpoint approach above to catch inline review comments too
 - Reviews with an empty `body` are normal (e.g. a bare "Approved") — skip them when filtering
 - The `&backoffice` string may appear mid-sentence; match the full comment body, not just word boundaries
-- PRs in `backoffice-volume` are rare but check anyway
+- Always read surrounding thread context before acting — don't reply to something already addressed
