@@ -24,7 +24,6 @@ import {
 import type { OAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/provider.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { BunMemoryOAuthProvider, redirectUriMatches } from "./memoryProvider";
-import { BunFileOAuthProvider } from "./fileProvider";
 
 const SCOPES = ["mcp:tools"] as const;
 
@@ -188,7 +187,7 @@ const ClientAuthenticatedFormSchema = z.object({
 });
 
 export interface OAuthRuntime {
-  provider: BunMemoryOAuthProvider | BunFileOAuthProvider;
+  provider: BunMemoryOAuthProvider;
   oauthMetadata: ReturnType<typeof createOAuthMetadata>;
   protectedResourceMetadata: Record<string, unknown>;
   mcpServerUrl: URL;
@@ -198,20 +197,18 @@ export interface OAuthRuntime {
   verifyMcpBearer: (req: Request) => Promise<{ authInfo: AuthInfo } | { response: Response }>;
 }
 
-export async function createOAuthRuntime(options: {
+export function createOAuthRuntime(options: {
   issuerUrl: URL;
   mcpServerUrl: URL;
   resourceName?: string;
   authPassphrase?: string;
-  stateFile?: string;
   allowedRedirectUriDomains?: string[];
-}): Promise<OAuthRuntime> {
+}): OAuthRuntime {
   const {
     issuerUrl,
     mcpServerUrl,
     resourceName = "filesystem-mcp",
     authPassphrase,
-    stateFile,
     allowedRedirectUriDomains = ["claude.ai"],
   } = options;
 
@@ -223,10 +220,7 @@ export async function createOAuthRuntime(options: {
     return resource.href === expected.href;
   };
 
-  const provider =
-    stateFile !== undefined
-      ? await BunFileOAuthProvider.create(stateFile, validateResource)
-      : new BunMemoryOAuthProvider(validateResource);
+  const provider = new BunMemoryOAuthProvider(validateResource);
 
   const oauthMetadata = createOAuthMetadata({
     provider: provider as unknown as OAuthServerProvider,

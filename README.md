@@ -76,9 +76,7 @@ Backoffice comes with full OAuth. Apps like Claude.ai handle the entire flow aut
 
 The OAuth consent screen requires a passphrase before issuing tokens. A passphrase is auto-generated on startup and printed to stdout. Set `AUTH_PASSPHRASE` to use your own.
 
-- **Persistent state (default).** Tokens are saved to `/data/oauth-state.json` and survive restarts and redeploys. Requires a `/data` Volume — see "Persisting Data" below. Set `OAUTH_RESET_ON_RESTART=1` to disable.
-- **In-memory state.** Set `OAUTH_RESET_ON_RESTART=1` to use in-memory state instead. Tokens are lost on restart and apps like Claude.ai re-authenticate automatically.
-- **Short-lived tokens.** Access tokens expire every hour. Apps like Claude.ai refresh them automatically.
+OAuth state is in-memory only. Tokens are lost on restart or redeploy — you will need to re-authenticate after each deploy.
 
 ### Environment variables
 
@@ -86,7 +84,6 @@ The OAuth consent screen requires a passphrase before issuing tokens. A passphra
 | ------------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `AUTH_PASSPHRASE`              | _(random, logged on startup)_            | Passphrase required on the OAuth consent screen. Set this to a strong secret so it never appears in logs.                                                                                                                              |
 | `ALLOWED_REDIRECT_URI_DOMAINS` | `claude.ai`                              | Comma-separated list of domains that OAuth clients are allowed to register redirect URIs for. Registrations with a `redirect_uri` on a domain not in this list are rejected. Set to `claude.ai,localhost` to also allow local clients. |
-| `OAUTH_RESET_ON_RESTART`       | `false`                                  | Set to `1` to disable OAuth state persistence. Existing tokens are lost on restart and clients re-authenticate automatically.                                                                                                          |
 | `USE_MCP_TOKEN_AUTH`           | `false`                                  | Set to `1` to replace OAuth with a single static bearer token. Simpler, but no per-client visibility in logs. The token is read from `MCP_TOKEN` or auto-generated and written to `.mcp-token`.                                        |
 | `MCP_TOKEN`                    | _(auto-generated)_                       | Static bearer token. Only used when `USE_MCP_TOKEN_AUTH=1`.                                                                                                                                                                            |
 | `PUBLIC_BASE_URL`              | _(derived from `RAILWAY_PUBLIC_DOMAIN`)_ | Public origin of the server (e.g. `https://your-app.up.railway.app`). Required on non-Railway hosts.                                                                                                                                   |

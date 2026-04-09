@@ -11,7 +11,7 @@ It's designed to be deployed on an isolated, ephemeral machine (e.g. Railway). C
 1. An MCP client (e.g. Claude.ai) connects to `/mcp` and authenticates
 2. The server registers MCP tools: `shell`, `patch_file`, `env_set`, `env_delete`, `memory_read`, `memory_write`, `memory_append`, `memory_patch`, and `get_instructions`
 3. `shell` runs a bash command and returns stdout, stderr, and the exit code. Working directory and environment persist across calls. `patch_file` applies structured line patches to files. `env_set`/`env_delete` persist environment variables (credentials, API keys) that are automatically injected into every `shell` call. `memory_read`/`memory_write`/`memory_append`/`memory_patch` give the AI persistent memory across conversations (`/data/MEMORY.md`). `get_instructions` returns the full system instructions for the MCP server.
-4. OAuth state is saved to `/data/oauth-state.json` by default so tokens survive restarts; set `OAUTH_RESET_ON_RESTART=1` to use in-memory only
+4. OAuth state is in-memory only — tokens are lost on restart/redeploy
 
 ## Setup for the User
 
@@ -88,7 +88,6 @@ bun run format:check # Check formatting
 | `PUBLIC_BASE_URL`       | No       | Public origin for OAuth metadata. Set when not on Railway.                                                    |
 | `RAILWAY_PUBLIC_DOMAIN` | No       | Auto-set by Railway. Used as public origin if `PUBLIC_BASE_URL` is unset.                                     |
 | `AUTH_PASSPHRASE`       | No       | Passphrase required on the OAuth authorize screen. Auto-generated on startup if not set. Printed to stdout.   |
-| `OAUTH_RESET_ON_RESTART` | No      | Set to `1` to disable OAuth state persistence. By default, state is saved to `/data/oauth-state.json` so tokens survive restarts. Not used when `USE_MCP_TOKEN_AUTH=1`. |
 | `USE_MCP_TOKEN_AUTH`    | No       | Set to `1` to use static bearer token auth instead of OAuth. Useful for local dev or non-browser MCP clients. |
 | `MCP_TOKEN`             | No       | Static bearer token (only used when `USE_MCP_TOKEN_AUTH=1`). Auto-generated to `.mcp-token` if unset.         |
 | `ALLOWED_REDIRECT_URI_DOMAINS` | No | Comma-separated list of domains OAuth clients are allowed to register redirect URIs for. Default: `claude.ai`. Set to `claude.ai,localhost` to also allow local clients. |

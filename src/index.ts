@@ -81,32 +81,16 @@ function loadOrCreateAuthPassphrase(): string {
 
 const authPassphrase = USE_MCP_TOKEN_AUTH ? undefined : loadOrCreateAuthPassphrase();
 
-const OAUTH_RESET_ON_RESTART =
-  process.env["OAUTH_RESET_ON_RESTART"] === "1" ||
-  process.env["OAUTH_RESET_ON_RESTART"] === "true";
-
-const oauthStateFile =
-  !USE_MCP_TOKEN_AUTH && !OAUTH_RESET_ON_RESTART ? "/data/oauth-state.json" : undefined;
-
-if (!USE_MCP_TOKEN_AUTH) {
-  if (oauthStateFile !== undefined) {
-    console.log(`[oauth] Persistence enabled — state file: ${oauthStateFile}`);
-  } else {
-    console.log("[oauth] Persistence disabled (OAUTH_RESET_ON_RESTART=1) — state is in-memory only.");
-  }
-}
-
 const allowedRedirectUriDomains = process.env["ALLOWED_REDIRECT_URI_DOMAINS"]
   ? process.env["ALLOWED_REDIRECT_URI_DOMAINS"].split(",").map((s) => s.trim()).filter(Boolean)
   : ["claude.ai"];
 
-const oauth = await createOAuthRuntime({
+const oauth = createOAuthRuntime({
   issuerUrl,
   mcpServerUrl,
   resourceName: "filesystem-mcp",
   allowedRedirectUriDomains,
   ...(authPassphrase !== undefined ? { authPassphrase } : {}),
-  ...(oauthStateFile !== undefined ? { stateFile: oauthStateFile } : {}),
 });
 
 interface SessionEntry {
