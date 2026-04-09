@@ -2,6 +2,62 @@
 
 Use this skill whenever the user asks you to summarise, analyse, extract insights from, or transform any content — articles, YouTube videos, transcripts, essays, code, etc.
 
+## Preflight
+
+Before running any commands, check Fabric is installed:
+
+```bash
+test -d /data/fabric/patterns && echo "ok" || echo "missing"
+```
+
+If **missing**, run the setup below. If **ok**, skip to [How to Use a Pattern](#how-to-use-a-pattern).
+
+### Fresh Install
+
+```bash
+mkdir -p /data/fabric
+
+# 1. Download fabric binary
+curl -kL -o /data/fabric/fabric \
+  "https://github.com/danielmiessler/fabric/releases/latest/download/fabric-linux-amd64"
+chmod +x /data/fabric/fabric
+
+# 2. Clone patterns only (sparse checkout)
+GIT_SSL_CAINFO=/data/cacert.pem git clone --depth=1 --filter=blob:none --sparse \
+  https://github.com/danielmiessler/fabric.git /tmp/fabric-repo
+cd /tmp/fabric-repo && git sparse-checkout set patterns
+cp -r /tmp/fabric-repo/patterns/ /data/fabric/patterns/
+rm -rf /tmp/fabric-repo
+
+# 3. Create the prompt reader helper
+cat > /data/fabric/fabric-prompt.ts << 'SCRIPT'
+#!/usr/bin/env bun
+const pattern = process.argv[2];
+if (!pattern) {
+  console.error("Usage: bun /data/fabric/fabric-prompt.ts <pattern_name>");
+  console.error("       bun /data/fabric/fabric-prompt.ts --list");
+  process.exit(1);
+}
+const PATTERNS_DIR = "/data/fabric/patterns";
+if (pattern === "--list") {
+  const { readdirSync } = await import("fs");
+  const patterns = readdirSync(PATTERNS_DIR).sort();
+  console.log(`${patterns.length} patterns available:\n`);
+  console.log(patterns.join("\n"));
+  process.exit(0);
+}
+const { existsSync, readFileSync } = await import("fs");
+const systemPath = `${PATTERNS_DIR}/${pattern}/system.md`;
+if (!existsSync(systemPath)) {
+  console.error(`Pattern "${pattern}" not found. Run with --list to see available patterns.`);
+  process.exit(1);
+}
+console.log(readFileSync(systemPath, "utf8"));
+SCRIPT
+```
+
+Verify: `bun /data/fabric/fabric-prompt.ts --list | head -5`
+
 ## What Fabric Is
 
 Fabric is a collection of 250+ expert-crafted AI system prompts ("patterns"), each designed for a specific task. Rather than calling Fabric's own API, Claude reads the pattern's system prompt and executes it directly.
