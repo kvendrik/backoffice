@@ -31,7 +31,7 @@ If it returns `ok`, the server is already up. If it fails, start it:
 
 ```bash
 # Start the share server (background — does not block the session)
-bun /app/bin/share server
+bun /app/skills/share server
 ```
 
 Use `shell(background: true, ...)` for this call. The server prunes expired tokens at startup and every 60 seconds.
@@ -41,7 +41,7 @@ Use `shell(background: true, ...)` for this call. The server prunes expired toke
 ## Sharing a File
 
 ```bash
-bun /app/bin/share add <path> [flags]
+bun /app/skills/share add <path> [flags]
 ```
 
 | Flag | Default | Description |
@@ -58,7 +58,7 @@ bun /app/bin/share add <path> [flags]
 ```bash
 # Move generated file into a safe location and share it
 cp /home/claude/report.pdf /tmp/report.pdf
-bun /app/bin/share add /tmp/report.pdf --minutes 15
+bun /app/skills/share add /tmp/report.pdf --minutes 15
 ```
 
 Output:
@@ -78,13 +78,13 @@ Give the URL to the user.
 
 ```bash
 # See all active links with time and uses remaining
-bun /app/bin/share list
+bun /app/skills/share list
 
 # Revoke by token prefix
-bun /app/bin/share rm a3f8c1
+bun /app/skills/share rm a3f8c1
 
 # Revoke by file path
-bun /app/bin/share rm /tmp/report.pdf
+bun /app/skills/share rm /tmp/report.pdf
 ```
 
 ---
@@ -92,7 +92,7 @@ bun /app/bin/share rm /tmp/report.pdf
 ## Help
 
 ```bash
-bun /app/bin/share -h
+bun /app/skills/share -h
 ```
 
 ---

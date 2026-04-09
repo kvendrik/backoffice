@@ -2,7 +2,7 @@
  * rpc.ts — Internal Unix-socket JSON-RPC server
  *
  * Listens on SOCKET_PATH (process-local, never publicly reachable).
- * Other local processes (e.g. bin/share) connect to register HTTP routes
+ * Other local processes (e.g. skills/share) connect to register HTTP routes
  * that the main Bun server then proxies.
  *
  * Supported methods:
