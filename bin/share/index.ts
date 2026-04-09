@@ -28,8 +28,10 @@ import { SOCKET_PATH } from "../../src/rpc.js";
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_PORT = parseInt(process.env["SHARE_PORT"] ?? "3001");
-const DEFAULT_MINUTES = 10;
+const DEFAULT_MINUTES = 5;
+const MAX_MINUTES = 20;
 const DEFAULT_TIMES = 1;
+const MAX_TIMES = 3;
 const DEFAULT_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 const CLEANUP_INTERVAL_MS = 60_000;
 
@@ -45,13 +47,13 @@ const MIME: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".gif":  "image/gif",
   ".webp": "image/webp",
-  ".svg":  "image/svg+xml",
+  ".svg":  "application/octet-stream",  // SVG can contain JS; force download
   // Archives
   ".zip":  "application/zip",
   ".tar":  "application/x-tar",
   ".gz":   "application/gzip",
   // Data / web (non-sensitive formats only)
-  ".html": "text/html",
+  ".html": "application/octet-stream",  // force download; prevent JS execution in browser
   ".csv":  "text/csv",
   // Media
   ".mp4":  "video/mp4",
@@ -123,7 +125,7 @@ USAGE
   bun /app/bin/share rm <token|path>          Revoke a link by token prefix or file path
 
 ADD FLAGS
-  --minutes <n>                  Link lifetime in minutes (default: ${String(DEFAULT_MINUTES)}, max: 60)
+  --minutes <n>                  Link lifetime in minutes (default: ${String(DEFAULT_MINUTES)}, max: ${String(MAX_MINUTES)})
   --times <n>                    Max downloads before expiry (default: ${String(DEFAULT_TIMES)})
   --delete-after                 Delete source file after final download
   --max-size <bytes>             Reject files larger than this (default: 100MB)
@@ -139,7 +141,7 @@ EXAMPLES
   bun /app/bin/share add /tmp/report.pdf --minutes 10
 
   # Share a file 3 times over 30 minutes, delete after last download
-  bun /app/bin/share add /tmp/data.zip --minutes 30 --times 3 --delete-after
+  bun /app/bin/share add /tmp/data.zip --minutes 20 --times 3 --delete-after
 
   # List active links
   bun /app/bin/share list
@@ -210,6 +212,8 @@ function handleRequest(req: Request): Response {
   }
 
   const token = match[1]!;
+
+  // Single read — used for all checks and the decrement write
   const store = readStore();
   const entry = store[token];
 
@@ -248,7 +252,9 @@ function handleRequest(req: Request): Response {
     try { unlinkSync(entry.filePath); } catch { /* best effort */ }
   }
 
-  const fileName = entry.filePath.split("/").pop() ?? "file";
+  const rawName = entry.filePath.split("/").pop() ?? "file";
+  // Strip quotes and control chars to prevent Content-Disposition header injection
+  const fileName = rawName.replace(/[\x00-\x1f"\\]/g, "_");
   const file = Bun.file(entry.filePath);
 
   return new Response(file, {
@@ -257,7 +263,6 @@ function handleRequest(req: Request): Response {
       ...SECURE_HEADERS,
       "Content-Type":        mimeFor(entry.filePath),
       "Content-Disposition": `attachment; filename="${fileName}"`,
-      "X-Uses-Remaining":    String(entry.usesRemaining),
     },
   });
 }
@@ -310,13 +315,13 @@ async function cmdAdd(argv: string[]): Promise<void> {
     process.exit(1);
   }
 
-  if (minutes < 1 || minutes > 60) {
-    console.error("Error: --minutes must be between 1 and 60");
+  if (minutes < 1 || minutes > MAX_MINUTES) {
+    console.error(`Error: --minutes must be between 1 and ${String(MAX_MINUTES)}`);
     process.exit(1);
   }
 
-  if (times < 1) {
-    console.error("Error: --times must be at least 1");
+  if (times < 1 || times > MAX_TIMES) {
+    console.error(`Error: --times must be between 1 and ${String(MAX_TIMES)}`);
     process.exit(1);
   }
 
