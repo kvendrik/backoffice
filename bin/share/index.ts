@@ -3,11 +3,11 @@
  * share — Backoffice file sharing CLI
  *
  * Usage:
- *   share server              Start the share HTTP server (run with background: true)
- *   share add <path>          Register a file and print a share URL
- *   share list                Show all active links
- *   share rm <token|path>     Revoke a link by token prefix or file path
- *   share -h                  Show this help
+ *   bun /app/bin/share server              Start the share HTTP server (run with background: true)
+ *   bun /app/bin/share add <path>          Register a file and print a share URL
+ *   bun /app/bin/share list                Show all active links
+ *   bun /app/bin/share rm <token|path>     Revoke a link by token prefix or file path
+ *   bun /app/bin/share -h                  Show this help
  */
 
 import { existsSync, statSync, unlinkSync, mkdirSync } from "node:fs";
@@ -97,10 +97,10 @@ function printHelp(): void {
 share — Backoffice file sharing
 
 USAGE
-  share server                   Start the HTTP server on port ${String(DEFAULT_PORT)}
-  share add <path> [flags]       Register a file, print the share URL
-  share list                     Show active links with time and uses remaining
-  share rm <token|path>          Revoke a link by token prefix or file path
+  bun /app/bin/share server                   Start the HTTP server on port ${String(DEFAULT_PORT)}
+  bun /app/bin/share add <path> [flags]       Register a file, print the share URL
+  bun /app/bin/share list                     Show active links with time and uses remaining
+  bun /app/bin/share rm <token|path>          Revoke a link by token prefix or file path
 
 ADD FLAGS
   --minutes <n>                  Link lifetime in minutes (default: ${String(DEFAULT_MINUTES)}, max: 60)
@@ -116,19 +116,19 @@ EXAMPLES
   shell(background: true, command: "bun /app/bin/share server")
 
   # Share a file for 10 minutes, single download
-  share add /tmp/report.pdf --minutes 10
+  bun /app/bin/share add /tmp/report.pdf --minutes 10
 
   # Share a file 3 times over 30 minutes, delete after last download
-  share add /tmp/data.zip --minutes 30 --times 3 --delete-after
+  bun /app/bin/share add /tmp/data.zip --minutes 30 --times 3 --delete-after
 
   # List active links
-  share list
+  bun /app/bin/share list
 
   # Revoke by token prefix
-  share rm a3f8c1
+  bun /app/bin/share rm a3f8c1
 
   # Revoke by path
-  share rm /tmp/report.pdf
+  bun /app/bin/share rm /tmp/report.pdf
 `.trim());
 }
 
@@ -233,7 +233,7 @@ async function cmdAdd(argv: string[]): Promise<void> {
 
   if (!rawPath) {
     console.error("Error: share add requires a file path");
-    console.error("Usage: share add <path> [--minutes 10] [--times 1] [--delete-after]");
+    console.error("Usage: bun /app/bin/share add <path> [--minutes 10] [--times 1] [--delete-after]");
     process.exit(1);
   }
 
@@ -395,6 +395,6 @@ switch (subcommand) {
     break;
   default:
     console.error(`Unknown subcommand: ${subcommand}`);
-    console.error("Run: share -h");
+    console.error("Run: bun /app/bin/share -h");
     process.exit(1);
 }
