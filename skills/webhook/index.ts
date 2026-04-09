@@ -18,9 +18,9 @@ import { SOCKET_PATH } from "../../src/rpc.js";
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const WEBHOOK_PORT   = parseInt(process.env["WEBHOOK_PORT"] ?? "3002");
-const STORE_DIR      = "/tmp/webhooks";
+const STORE_DIR      = "/data/webhooks";
 const REG_PATH       = `${STORE_DIR}/registrations.json`;
-const SEEN_PATH      = `${STORE_DIR}/seen.json`;
+const SEEN_PATH      = "/tmp/webhooks/seen.json";
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_REPLAY_TTL = 86_400;  // 24 hours in seconds
 
@@ -67,7 +67,7 @@ function readRegistrations(): RegStore  { return readJson<RegStore>(REG_PATH, {}
 function readSeen():          SeenStore { return readJson<SeenStore>(SEEN_PATH, {}); }
 
 function writeRegistrations(s: RegStore):  void { ensureStoreDir(); writeJson(REG_PATH, s); }
-function writeSeen(s: SeenStore):          void { ensureStoreDir(); writeJson(SEEN_PATH, s); }
+function writeSeen(s: SeenStore): void { mkdirSync("/tmp/webhooks", { recursive: true }); writeJson(SEEN_PATH, s); }
 
 function pruneSeen(store: SeenStore, ttlSeconds: number): SeenStore {
   const cutoff = Date.now() - ttlSeconds * 1000;

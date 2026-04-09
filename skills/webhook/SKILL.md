@@ -73,7 +73,9 @@ bun /app/skills/webhook register --secret <secret> --cmd "bun /data/handle.ts" \
 
 ## Storage
 
-Ephemeral — `/tmp/webhooks/`, gone on container restart. Server re-registers all endpoints on startup.
+Registrations persist to `/data/webhooks/registrations.json` — survives container restarts. Server re-registers all routes on startup.
+
+The replay-detection store (`/tmp/webhooks/seen.json`) is ephemeral — lost on restart, which is acceptable.
 
 - `/tmp/webhooks/registrations.json`
 - `/tmp/webhooks/seen.json`
