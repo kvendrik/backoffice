@@ -47,21 +47,21 @@ SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" bun gh-comments.ts ...
 ```bash
 SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" \
   bun /app/skills/gh-comments/scripts/gh-comments.ts <owner/repo> --watch \
-  >> /data/skills/gh-comments/<owner>-<repo>.log 2>&1 &
+  >> /tmp/gh-comments/<owner>-<repo>.log 2>&1 &
 
-echo $! > /data/skills/gh-comments/<owner>-<repo>.pid
+echo $! > /tmp/gh-comments/<owner>-<repo>.pid
 echo "Watcher started"
 ```
 
 Check on it:
 ```bash
-tail -f /data/skills/gh-comments/<owner>-<repo>.log
-kill -0 $(cat /data/skills/gh-comments/<owner>-<repo>.pid) && echo running || echo stopped
+tail -f /tmp/gh-comments/<owner>-<repo>.log
+kill -0 $(cat /tmp/gh-comments/<owner>-<repo>.pid) && echo running || echo stopped
 ```
 
 Stop it:
 ```bash
-kill $(cat /data/skills/gh-comments/<owner>-<repo>.pid)
+kill $(cat /tmp/gh-comments/<owner>-<repo>.pid)
 ```
 
 ---
@@ -94,12 +94,12 @@ For each open issue or PR, all three GitHub comment streams are checked:
 
 Seen comment IDs are stored per-repo at:
 ```
-/data/skills/gh-comments/state/<owner>-<repo>.json
+/tmp/gh-comments-state/<owner>-<repo>.json
 ```
 
 Reset (re-report all existing comments on next run):
 ```bash
-rm /data/skills/gh-comments/state/<owner>-<repo>.json
+rm /tmp/gh-comments-state/<owner>-<repo>.json
 ```
 
 Or use `--all` for a one-off full fetch without touching the state file.
@@ -115,4 +115,4 @@ Or use `--all` for a one-off full fetch without touching the state file.
 | `--issue <n>` | — | Scope to one issue |
 | `--interval <n>` | `60` | Seconds between polls (watch mode only) |
 | `--all` | — | Ignore state; show all comments |
-| `--state-dir <path>` | `/data/skills/gh-comments/state` | Custom state location |
+| `--state-dir <path>` | `/tmp/gh-comments-state` | Custom state location |
