@@ -20,6 +20,11 @@ export function create(server: McpServer): void {
 
 const LOG_FILE = path.join("/data", "log.jsonl");
 
+function ensureLogFile(): void {
+  fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+  if (!fs.existsSync(LOG_FILE)) fs.writeFileSync(LOG_FILE, "");
+}
+
 interface ToolCallContext {
   toolName: string;
   args: Record<string, unknown>;
@@ -58,6 +63,7 @@ function applyLogging(server: McpServer): void {
 
       const callId = nanoid();
 
+      ensureLogFile();
       fs.appendFileSync(
         LOG_FILE,
         JSON.stringify({

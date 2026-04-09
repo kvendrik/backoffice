@@ -6,38 +6,25 @@
  * that the main Bun server then proxies.
  *
  * Security:
- *   - A shared secret is generated at startup and written to SECRET_PATH.
- *     Every RPC call must include params.secret matching this value.
+ *   - The Unix socket itself is the trust boundary — only local processes can reach it.
  *   - Route targets must be http://localhost:<port> or http://127.0.0.1:<port>.
  *   - Route patterns must start with an allowed prefix (ALLOWED_PATTERNS).
  *
  * Supported methods:
- *   route.register   { pattern: string, target: string, secret: string }
- *   route.unregister { pattern: string, secret: string }
+ *   route.register   { pattern: string, target: string }
+ *   route.unregister { pattern: string }
  */
 
 import { createServer } from "node:net";
-import { existsSync, unlinkSync, writeFileSync } from "node:fs";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { existsSync, unlinkSync } from "node:fs";
 
 export const SOCKET_PATH = "/tmp/backoffice.sock";
-export const SECRET_PATH = "/tmp/backoffice-rpc.secret";
 
 const ALLOWED_PATTERNS = ["/share"];
 const LOCALHOST_TARGET = /^http:\/\/(?:localhost|127\.0\.0\.1):\d+$/;
 
 /** pattern (e.g. "/share") → target base URL (e.g. "http://localhost:3001") */
 export const routeRegistry = new Map<string, string>();
-
-let rpcSecret = "";
-
-function verifySecret(presented: string | undefined): boolean {
-  if (!presented || !rpcSecret) return false;
-  const a = Buffer.from(presented, "utf8");
-  const b = Buffer.from(rpcSecret, "utf8");
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
 
 function isAllowedPattern(pattern: string): boolean {
   return ALLOWED_PATTERNS.some((p) => pattern === p || pattern.startsWith(p + "/"));
@@ -49,10 +36,6 @@ function isAllowedTarget(target: string): boolean {
 
 export function startRpcServer(): void {
   if (existsSync(SOCKET_PATH)) unlinkSync(SOCKET_PATH);
-
-  rpcSecret = randomBytes(32).toString("hex");
-  writeFileSync(SECRET_PATH, rpcSecret + "\n", { mode: 0o600 });
-  console.log(`[rpc] Secret written to ${SECRET_PATH}`);
 
   const server = createServer((socket) => {
     let buf = "";
@@ -96,10 +79,6 @@ function handleRpc(msg: unknown): object {
   const req = msg as RpcRequest;
   const id = req.id ?? null;
   const params: RpcParams = req.params ?? {};
-
-  if (!verifySecret(params["secret"])) {
-    return { jsonrpc: "2.0", error: { code: -32600, message: "Invalid or missing secret" }, id };
-  }
 
   if (req.method === "route.register") {
     const pattern = params["pattern"];
