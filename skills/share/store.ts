@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, renameSync } from "node:fs";
 
-export const STORE_PATH = process.env["SHARE_STORE_PATH"] ?? "/tmp/sharing/store.json";
+export const STORE_PATH = process.env["SHARE_STORE_PATH"] ?? "/tmp/sharing.json";
 export const ALLOWED_PREFIXES = ["/data/", "/tmp/", "/var/tmp/"];
 
 export interface TokenEntry {
