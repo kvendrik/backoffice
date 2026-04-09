@@ -3,7 +3,8 @@
  * webhook — Backoffice webhook CLI
  *
  * The webhook HTTP server starts automatically with Backoffice.
- * Use this CLI to manage endpoints:
+ * This CLI manages registrations by reading/writing
+ * /data/webhooks/registrations.json directly — no RPC needed.
  *
  *   bun /app/skills/webhook register --secret <s> --cmd <c> [flags]
  *   bun /app/skills/webhook list
@@ -12,17 +13,15 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { createConnection } from "node:net";
-import { SOCKET_PATH } from "../../src/rpc.js";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { readRegistrations } from "../../src/webhook.js";
 import type { RegStore } from "../../src/webhook.js";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const WEBHOOK_PORT      = parseInt(process.env["WEBHOOK_PORT"] ?? "3002");
-const REG_DIR           = "/data/webhooks";
-const REG_PATH          = `${REG_DIR}/registrations.json`;
+const WEBHOOK_PORT       = parseInt(process.env["WEBHOOK_PORT"] ?? "3002");
+const REG_DIR            = "/data/webhooks";
+const REG_PATH           = `${REG_DIR}/registrations.json`;
 const DEFAULT_REPLAY_TTL = 86_400;
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -30,19 +29,6 @@ const DEFAULT_REPLAY_TTL = 86_400;
 function writeRegistrations(store: RegStore): void {
   if (!existsSync(REG_DIR)) mkdirSync(REG_DIR, { recursive: true, mode: 0o700 });
   writeFileSync(REG_PATH, JSON.stringify(store, null, 2), { mode: 0o600 });
-}
-
-// ── RPC ───────────────────────────────────────────────────────────────────────
-
-async function rpcCall(method: string, params: Record<string, string>): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const socket = createConnection(SOCKET_PATH);
-    socket.on("connect", () => {
-      socket.write(JSON.stringify({ jsonrpc: "2.0", method, params, id: 1 }) + "\n");
-    });
-    socket.on("data", () => { socket.destroy(); resolve(); });
-    socket.on("error", reject);
-  });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -73,7 +59,7 @@ function printHelp(): void {
   console.log(`
 webhook — Backoffice webhook CLI
 
-The webhook server starts automatically with Backoffice — no manual server start needed.
+The webhook server starts automatically with Backoffice — no manual start needed.
 
 USAGE
   bun /app/skills/webhook register [flags]          Register a new endpoint, print the URL
@@ -105,7 +91,7 @@ EXAMPLES
 
 // ── Subcommand: register ──────────────────────────────────────────────────────
 
-async function cmdRegister(argv: string[]): Promise<void> {
+function cmdRegister(argv: string[]): void {
   const args = parseArgs(argv);
 
   const secret = typeof args["secret"] === "string" ? args["secret"].trim() : "";
@@ -123,14 +109,6 @@ async function cmdRegister(argv: string[]): Promise<void> {
 
   const id      = randomBytes(32).toString("hex");
   const pattern = `/webhook/${id}`;
-
-  // Register route with the running server via RPC
-  try {
-    await rpcCall("route.register", { pattern, target: `http://localhost:${String(WEBHOOK_PORT)}` });
-  } catch {
-    console.error("Error: could not register route — is Backoffice running?");
-    process.exit(1);
-  }
 
   const store = readRegistrations();
   store[id] = { id, name, secret, cmd, pattern, createdAt: Date.now(), signatureHeader, signaturePrefix, signatureEncoding, replayTtl };
@@ -160,7 +138,7 @@ function cmdList(): void {
 
 // ── Subcommand: rm ────────────────────────────────────────────────────────────
 
-async function cmdRm(argv: string[]): Promise<void> {
+function cmdRm(argv: string[]): void {
   const [query] = argv;
   if (!query) { console.error("Error: webhook rm requires an id prefix"); process.exit(1); }
 
@@ -169,7 +147,6 @@ async function cmdRm(argv: string[]): Promise<void> {
 
   for (const [id, reg] of Object.entries(store)) {
     if (id.startsWith(query)) {
-      try { await rpcCall("route.unregister", { pattern: reg.pattern }); } catch { /* best effort */ }
       delete store[id];
       removed.push(`${id.slice(0, 8)}… (${reg.name ?? reg.cmd})`);
     }
@@ -186,9 +163,9 @@ async function cmdRm(argv: string[]): Promise<void> {
 const [subcommand, ...rest] = process.argv.slice(2);
 
 switch (subcommand) {
-  case "register": await cmdRegister(rest);  break;
-  case "list":     cmdList();                break;
-  case "rm":       await cmdRm(rest);        break;
+  case "register": cmdRegister(rest);  break;
+  case "list":     cmdList();          break;
+  case "rm":       cmdRm(rest);        break;
   case "-h": case "--help": case "help": case undefined: printHelp(); break;
   default:
     console.error(`Unknown subcommand: ${subcommand}`);

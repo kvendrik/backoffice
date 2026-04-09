@@ -2,16 +2,17 @@
  * Persistent webhook server.
  *
  * Started automatically by src/index.ts alongside cron.
- * Reads /data/webhooks/registrations.json on startup, registers each
- * endpoint's route directly into routeRegistry, and starts an HTTP server
- * that verifies HMAC signatures and fires the configured --cmd on valid requests.
+ * Reads /data/webhooks/registrations.json on startup and starts an HTTP
+ * server that verifies HMAC signatures and fires the configured --cmd on
+ * valid requests.
  *
- * The skills/webhook CLI manages registrations via the Unix socket RPC
- * (route.register / route.unregister), same as the share skill.
+ * A single /webhook prefix route is registered in routeRegistry — the server
+ * handles per-ID lookup itself from disk. The CLI writes registrations
+ * directly to disk; no RPC needed.
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { routeRegistry } from "./rpc.js";
 
 const WEBHOOK_PORT   = parseInt(process.env["WEBHOOK_PORT"] ?? "3002");
@@ -156,13 +157,10 @@ async function handleRequest(req: Request): Promise<Response> {
 // ── Public entry point ────────────────────────────────────────────────────────
 
 export function startWebhookServer(): void {
-  const regs = readRegistrations();
-  const count = Object.keys(regs).length;
+  const count = Object.keys(readRegistrations()).length;
 
-  // Register all persisted endpoints directly into routeRegistry
-  for (const reg of Object.values(regs)) {
-    routeRegistry.set(reg.pattern, `http://localhost:${String(WEBHOOK_PORT)}`);
-  }
+  // Single prefix route — the server handles per-ID lookup itself
+  routeRegistry.set("/webhook", `http://localhost:${String(WEBHOOK_PORT)}`);
 
   if (count > 0) {
     console.log(`[webhook] Restored ${String(count)} endpoint(s)`);
