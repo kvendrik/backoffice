@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, existsSync } from "fs";
 
 // /data/skills is scanned first — user skills win on name collision
-const SKILL_DIRS = ["/data/skills", "/data/source/skills"];
+const SKILL_DIRS = ["/data/skills", "/app/skills"];
 
 type Skill = { name: string; description: string; path: string };
 const seen = new Set<string>();

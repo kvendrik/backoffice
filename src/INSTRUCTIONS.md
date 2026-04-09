@@ -77,8 +77,8 @@ Organise `memory_write` content with these sections:
 
 Skills are reusable task guides bundled with Backoffice. At the start of every conversation, run:
 
-    bun /data/source/skills/scan.ts
+    bun /app/skills/scan.ts
 
-This scans both `/data/source/skills/` (bundled defaults) and `/data/skills/` (user overrides). If both locations have a skill with the same name, `/data/skills/` wins. Read the relevant SKILL.md before starting any task it covers.
+This scans both `/app/skills/` (bundled defaults) and `/data/skills/` (user overrides). If both locations have a skill with the same name, `/data/skills/` wins. Read the relevant SKILL.md before starting any task it covers.
 
-To add or edit a skill: create or modify a folder under `/data/source/skills/` (git-tracked) or `/data/skills/` (volume-only, private).
+To add or edit a skill: create or modify a folder under `/app/skills/` (git-tracked) or `/data/skills/` (volume-only, private).
