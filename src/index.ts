@@ -257,7 +257,7 @@ Bun.serve({
       if (url.pathname === pattern || url.pathname.startsWith(pattern + "/")) {
         const proxyUrl = target + url.pathname + url.search;
         try {
-          return fetch(new Request(proxyUrl, {
+          return await fetch(new Request(proxyUrl, {
             method: req.method,
             headers: req.headers,
             body: req.method !== "GET" && req.method !== "HEAD" ? req.body : null,

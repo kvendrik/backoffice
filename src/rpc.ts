@@ -50,20 +50,23 @@ export function startRpcServer(): void {
   });
 }
 
+type RpcParams = Record<string, string>;
+
 interface RpcRequest {
   jsonrpc?: string;
   method?: string;
-  params?: Record<string, string>;
+  params?: RpcParams;
   id?: unknown;
 }
 
 function handleRpc(msg: unknown): object {
   const req = msg as RpcRequest;
-  const id = req?.id ?? null;
+  const id = req.id ?? null;
+  const params: RpcParams = req.params ?? {};
 
-  if (req?.method === "route.register") {
-    const pattern = req.params?.["pattern"];
-    const target  = req.params?.["target"];
+  if (req.method === "route.register") {
+    const pattern = params["pattern"];
+    const target  = params["target"];
     if (!pattern || !target) {
       return { jsonrpc: "2.0", error: { code: -32602, message: "pattern and target required" }, id };
     }
@@ -72,8 +75,8 @@ function handleRpc(msg: unknown): object {
     return { jsonrpc: "2.0", result: { ok: true }, id };
   }
 
-  if (req?.method === "route.unregister") {
-    const pattern = req.params?.["pattern"];
+  if (req.method === "route.unregister") {
+    const pattern = params["pattern"];
     if (!pattern) {
       return { jsonrpc: "2.0", error: { code: -32602, message: "pattern required" }, id };
     }
