@@ -123,15 +123,9 @@ By default Railway spins up a fresh container on every deploy. To persist data a
 
 Packages installed via `bun install -g` go to `/data/bun` and packages installed via `brew install` go to `/data/homebrew` — both paths are on the persistent volume, so installed tools survive redeploys automatically.
 
-## Logs
-
-Backoffice keeps logs of all tool calls (includes caller oauth details) and results in `/data/log.jsonl`. Analyzing this file can help you figure out how to improve your setup:
-
-```bash
-claude "Here are the logs from the Backoffice railway server and show how the AI assistant has been using Backoffice. Tell me what you notice.\n\n---\n\n$(railway ssh -- cat /data/log.jsonl)"
-```
-
 ## Skills
+
+Backoffice ships with a bunch of [`AgentSkills`](https://agentskills.io/). It also adds new skills in `/data/skills` when you ask for it.
 
 | Skill | What it does |
 | --- | --- |
@@ -148,12 +142,18 @@ claude "Here are the logs from the Backoffice railway server and show how the AI
 | `self-improve` | Analyze failure logs and auto-fix recurring issues |
 | `optimize-memory` | Audit and clean up the memory file |
 
-Skills live in `/app/skills/` (built-in) and `/data/skills/` (your own). Each skill is a folder with a `SKILL.md` that tells the AI when and how to use it. Volume skills override built-in ones with the same name.
+### Fun examples
 
-### Combinations
-
-Skills compose. A few examples:
+A couple of fun examples of what you can do with this:
 
 - **cron + github + llm** — poll GitHub issues on a schedule, process comments through the LLM, and post replies automatically
 - **auto-research + fabric + telegram** — deep-dive a topic, distill it with Fabric, and ping you the summary on Telegram
-- **cron + self-improve** — nightly job that analyzes failure logs and patches what's broken before you wake up
+- **cron + self-improve + github** — nightly job that analyzes logs, improves the Backoffice, and puts up PRs while you sleep
+
+## Logs
+
+Backoffice keeps logs of all tool calls (includes caller oauth details) and results in `/data/log.jsonl`. Analyzing this file can help you figure out how to improve your setup:
+
+```bash
+claude "Here are the logs from the Backoffice railway server and show how the AI assistant has been using Backoffice. Tell me what you notice.\n\n---\n\n$(railway ssh -- cat /data/log.jsonl)"
+```
