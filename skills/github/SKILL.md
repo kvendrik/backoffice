@@ -123,3 +123,52 @@ SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/bins/gh api \
 - `gh pr edit` fails with a GraphQL deprecation warning — use `gh api` with `--method PATCH` instead
 - Always `cd` into the repo directory before running `gh pr` commands — `gh` infers the repo from the git remote
 - Token scope is limited to `kvendrik/backoffice` and `kvendrik/backoffice-volume` only
+
+---
+
+## Checking for Mentions (`&backoffice`)
+
+The mention handle is `&backoffice` — not `@backoffice` (which would tag a real GitHub account).
+
+The user will tell you which repo(s) to scan. GitHub has three comment streams per PR — check all of them:
+
+```bash
+PR=2
+REPO=OWNER/REPO
+
+# (a) Issue comments — top-level thread
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
+  repos/$REPO/issues/$PR/comments \
+  --jq '[.[] | select(.body | ascii_downcase | contains("&backoffice"))] | .[] | {user: .user.login, body, url: .html_url}'
+
+# (b) Review comments — inline code comments
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
+  repos/$REPO/pulls/$PR/comments \
+  --jq '[.[] | select(.body | ascii_downcase | contains("&backoffice"))] | .[] | {user: .user.login, body, url: .html_url}'
+
+# (c) Reviews — overall review submissions
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
+  repos/$REPO/pulls/$PR/reviews \
+  --jq '[.[] | select(.body | ascii_downcase | contains("&backoffice"))] | .[] | {user: .user.login, body, state, url: .html_url}'
+```
+
+For each mention, classify and act:
+
+| Type | Action |
+|---|---|
+| Question | Draft a reply |
+| Code review request | Read the diff, reply with assessment |
+| Task / change request | Make the change, reply when done |
+| FYI / no action needed | Acknowledge, no further action |
+| Already replied | Skip |
+
+Always read surrounding thread context first — don't reply to something already addressed. **Show any draft reply to Koen and wait for approval before posting.**
+
+```bash
+# Post a reply to a PR thread
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
+  repos/$REPO/issues/$PR/comments \
+  --method POST \
+  --field body='Your reply here' \
+  --jq '.html_url'
+```
