@@ -137,7 +137,6 @@ Backoffice [ships](/skills) with a bunch of [`AgentSkills`](https://agentskills.
 | `git` / `github` | Commits, branches, PRs via the GitHub CLI |
 | `telegram` | Send notifications to Telegram |
 | `share` | Generate tokenized download links for files |
-| `skill-creator` | Create new skills, run evals, optimize triggers |
 | `self-modify` | Change Backoffice's own source, tools, or instructions |
 | `self-improve` | Analyze failure logs and auto-fix recurring issues |
 | `optimize-memory` | Audit and clean up the memory file |
