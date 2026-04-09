@@ -8,6 +8,7 @@ import { version } from "../package.json" with { type: "json" };
 import { createMcpServer, mcpCorsHeaders, withCors } from "./mcp";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createOAuthRuntime, InMemoryEventStore } from "./oauth";
+import { startRpcServer, routeRegistry } from "./rpc";
 
 const portEnv = process.env["PORT"];
 const port = portEnv !== undefined && portEnv !== "" ? Number(portEnv) : 3000;
@@ -222,6 +223,8 @@ async function handleMcpWithStaticToken(req: Request): Promise<Response> {
   return handleMcpSession(req, tokenSessions);
 }
 
+startRpcServer();
+
 Bun.serve({
   port: listenPort,
   hostname: "0.0.0.0",
@@ -247,6 +250,22 @@ Bun.serve({
         return handleMcpWithStaticToken(req);
       }
       return handleMcpWithOAuth(req);
+    }
+
+    // Proxy to locally registered routes (registered via Unix socket RPC)
+    for (const [pattern, target] of routeRegistry) {
+      if (url.pathname === pattern || url.pathname.startsWith(pattern + "/")) {
+        const proxyUrl = target + url.pathname + url.search;
+        try {
+          return fetch(new Request(proxyUrl, {
+            method: req.method,
+            headers: req.headers,
+            body: req.method !== "GET" && req.method !== "HEAD" ? req.body : null,
+          }));
+        } catch {
+          return new Response("Bad gateway", { status: 502 });
+        }
+      }
     }
 
     return new Response("Not found", { status: 404 });

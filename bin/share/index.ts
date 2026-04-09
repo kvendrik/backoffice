@@ -13,6 +13,7 @@
 import { existsSync, statSync, unlinkSync, mkdirSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { extname, resolve, dirname } from "node:path";
+import { createConnection } from "node:net";
 import {
   readStore,
   writeStore,
@@ -22,6 +23,7 @@ import {
   STORE_PATH,
   type TokenEntry,
 } from "./store.js";
+import { SOCKET_PATH } from "../../src/rpc.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -68,8 +70,21 @@ function mimeFor(filePath: string): string {
   return MIME[extname(filePath).toLowerCase()] ?? "application/octet-stream";
 }
 
-function baseUrl(port: number): string {
-  return (process.env["SHARE_PUBLIC_URL"] ?? `http://localhost:${String(port)}`).replace(/\/$/, "");
+function baseUrl(): string {
+  const domain = process.env["RAILWAY_PUBLIC_DOMAIN"]?.trim();
+  if (domain) return `https://${domain}`;
+  return `http://localhost:${String(DEFAULT_PORT)}`;
+}
+
+async function rpcCall(method: string, params: Record<string, string>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const socket = createConnection(SOCKET_PATH);
+    socket.on("connect", () => {
+      socket.write(JSON.stringify({ jsonrpc: "2.0", method, params, id: 1 }) + "\n");
+    });
+    socket.on("data", () => { socket.destroy(); resolve(); });
+    socket.on("error", reject);
+  });
 }
 
 function ensureStoreDir(): void {
@@ -149,7 +164,7 @@ async function cmdServer(argv: string[]): Promise<void> {
   writeStore(initial);
   console.log(`[share server] Starting on port ${String(port)}`);
   console.log(`[share server] Store: ${STORE_PATH}`);
-  console.log(`[share server] Base URL: ${baseUrl(port)}`);
+  console.log(`[share server] Base URL: ${baseUrl()}`);
 
   setInterval(() => {
     const pruned = pruneStore(readStore());
@@ -162,6 +177,22 @@ async function cmdServer(argv: string[]): Promise<void> {
       return handleRequest(req);
     },
   });
+
+  // Register /share route with the MCP server via internal RPC
+  try {
+    await rpcCall("route.register", { pattern: "/share", target: `http://localhost:${String(port)}` });
+    console.log(`[share server] Registered /share route with MCP server`);
+  } catch {
+    console.warn(`[share server] Could not register route — MCP server socket not available. URLs will only work via localhost.`);
+  }
+
+  // Unregister on shutdown
+  for (const sig of ["SIGTERM", "SIGINT"] as const) {
+    process.on(sig, async () => {
+      try { await rpcCall("route.unregister", { pattern: "/share" }); } catch { /* best effort */ }
+      process.exit(0);
+    });
+  }
 
   console.log(`[share server] Ready`);
 }
@@ -309,7 +340,7 @@ async function cmdAdd(argv: string[]): Promise<void> {
   store[token] = entry;
   writeStore(store);
 
-  const url = `${baseUrl(port)}/share/${token}`;
+  const url = `${baseUrl()}/share/${token}`;
   const usesLabel = times === 1 ? "1 download" : `${String(times)} downloads`;
   const deleteLabel = deleteAfter ? " · delete-after" : "";
 
@@ -335,7 +366,7 @@ function cmdList(): void {
     return;
   }
 
-  const base = baseUrl(DEFAULT_PORT);
+  const base = baseUrl();
 
   console.log(`\n  ${"TOKEN".padEnd(12)}  ${"EXPIRES".padEnd(8)}  ${"USES".padEnd(5)}  PATH`);
   console.log(`  ${"─".repeat(70)}`);
