@@ -172,3 +172,14 @@ SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
   --field body='Your reply here' \
   --jq '.html_url'
 ```
+
+---
+
+## Comment Format
+
+Always post comments in this format — Backoffice posts as Koen's account so attribution matters:
+
+```
+Backoffice:
+> Your message here
+```
