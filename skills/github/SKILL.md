@@ -177,7 +177,7 @@ SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
 
 ## Comment Format
 
-Always post comments in this format — Backoffice posts as Koen's account so attribution matters:
+Always post comments in this format — Backoffice posts as the owner's account so attribution matters:
 
 ```
 Backoffice:
