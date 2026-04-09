@@ -15,7 +15,7 @@
  *   --issue <n>        Scope to a specific issue
  *   --interval <secs>  Poll interval in watch mode (default: 60)
  *   --state-dir <path> Where to persist seen IDs
- *                      (default: /data/skills/gh-comments/state)
+ *                      (default: /tmp/gh-comments-state)
  *   --all              Include already-seen comments (ignores state)
  *
  * Env vars required:
@@ -59,7 +59,7 @@ const showAll     = flag("--all");
 const intervalSec = parseInt(opt("--interval") ?? "60", 10);
 const watchPR     = opt("--pr")    != null ? parseInt(opt("--pr")!,    10) : null;
 const watchIssue  = opt("--issue") != null ? parseInt(opt("--issue")!, 10) : null;
-const stateDir    = opt("--state-dir") ?? "/data/skills/gh-comments/state";
+const stateDir    = opt("--state-dir") ?? "/tmp/gh-comments-state";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 if (!GITHUB_TOKEN) { console.error("GITHUB_TOKEN env var is required"); process.exit(1); }
