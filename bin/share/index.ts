@@ -31,22 +31,27 @@ const DEFAULT_TIMES = 1;
 const DEFAULT_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 const CLEANUP_INTERVAL_MS = 60_000;
 
+// Allowlist — only explicitly safe-to-share types permitted.
+// Intentionally excludes .txt, .md, .json, .env, .ts, .js etc.
+// which could expose sensitive data (memory, tokens, config).
 const MIME: Record<string, string> = {
+  // Documents
   ".pdf":  "application/pdf",
+  // Images
   ".png":  "image/png",
   ".jpg":  "image/jpeg",
   ".jpeg": "image/jpeg",
   ".gif":  "image/gif",
   ".webp": "image/webp",
   ".svg":  "image/svg+xml",
+  // Archives
   ".zip":  "application/zip",
   ".tar":  "application/x-tar",
   ".gz":   "application/gzip",
-  ".json": "application/json",
-  ".txt":  "text/plain",
-  ".md":   "text/markdown",
+  // Data / web (non-sensitive formats only)
   ".html": "text/html",
   ".csv":  "text/csv",
+  // Media
   ".mp4":  "video/mp4",
   ".mp3":  "audio/mpeg",
 };
@@ -252,6 +257,14 @@ async function cmdAdd(argv: string[]): Promise<void> {
 
   if (!isAllowedPath(filePath)) {
     console.error(`Error: path must be under /data/, /tmp/, or /var/tmp/`);
+    process.exit(1);
+  }
+
+  const ext = extname(filePath).toLowerCase();
+  if (!MIME[ext]) {
+    const allowed = Object.keys(MIME).join(", ");
+    console.error(`Error: file type "${ext || "(none)"}" is not allowed.`);
+    console.error(`Allowed extensions: ${allowed}`);
     process.exit(1);
   }
 
