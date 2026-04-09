@@ -47,7 +47,7 @@ const MIME: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".gif":  "image/gif",
   ".webp": "image/webp",
-  ".svg":  "image/svg+xml",
+  ".svg":  "application/octet-stream",  // SVG can contain JS; force download
   // Archives
   ".zip":  "application/zip",
   ".tar":  "application/x-tar",
@@ -141,7 +141,7 @@ EXAMPLES
   bun /app/bin/share add /tmp/report.pdf --minutes 10
 
   # Share a file 3 times over 30 minutes, delete after last download
-  bun /app/bin/share add /tmp/data.zip --minutes 30 --times 3 --delete-after
+  bun /app/bin/share add /tmp/data.zip --minutes 20 --times 3 --delete-after
 
   # List active links
   bun /app/bin/share list
@@ -212,6 +212,8 @@ function handleRequest(req: Request): Response {
   }
 
   const token = match[1]!;
+
+  // Single read — used for all checks and the decrement write
   const store = readStore();
   const entry = store[token];
 
@@ -236,23 +238,15 @@ function handleRequest(req: Request): Response {
     return new Response("File no longer available", { status: 410, headers: SECURE_HEADERS });
   }
 
-  // Re-read store immediately before write to narrow race window on concurrent requests
-  const freshStore = readStore();
-  const freshEntry = freshStore[token];
-  if (!freshEntry || freshEntry.usesRemaining <= 0 || freshEntry.expiresAt <= Date.now()) {
-    return new Response("Link expired", { status: 410, headers: SECURE_HEADERS });
-  }
-  freshEntry.usesRemaining -= 1;
-  const isLastDownload = freshEntry.usesRemaining <= 0;
+  entry.usesRemaining -= 1;
+  const isLastDownload = entry.usesRemaining <= 0;
 
   if (isLastDownload) {
-    delete freshStore[token];
+    delete store[token];
   } else {
-    freshStore[token] = freshEntry;
+    store[token] = entry;
   }
-  writeStore(freshStore);
-  // Reassign entry for deleteAfter logic below
-  Object.assign(entry, freshEntry);
+  writeStore(store);
 
   if (isLastDownload && entry.deleteAfter) {
     try { unlinkSync(entry.filePath); } catch { /* best effort */ }
@@ -269,7 +263,6 @@ function handleRequest(req: Request): Response {
       ...SECURE_HEADERS,
       "Content-Type":        mimeFor(entry.filePath),
       "Content-Disposition": `attachment; filename="${fileName}"`,
-      "X-Uses-Remaining":    String(entry.usesRemaining),
     },
   });
 }
