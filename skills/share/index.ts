@@ -10,7 +10,7 @@
  *   bun /app/bin/share -h                  Show this help
  */
 
-import { existsSync, statSync, unlinkSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, statSync, unlinkSync, mkdirSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { extname, resolve, dirname } from "node:path";
 import { createConnection } from "node:net";
@@ -23,7 +23,7 @@ import {
   STORE_PATH,
   type TokenEntry,
 } from "./store.js";
-import { SOCKET_PATH, SECRET_PATH } from "../../src/rpc.js";
+import { SOCKET_PATH } from "../../src/rpc.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -80,15 +80,9 @@ function baseUrl(): string {
 
 async function rpcCall(method: string, params: Record<string, string>): Promise<void> {
   return new Promise((resolve, reject) => {
-    let secret: string;
-    try {
-      secret = readFileSync(SECRET_PATH, "utf8").trim();
-    } catch {
-      return reject(new Error(`Cannot read RPC secret from ${SECRET_PATH}`));
-    }
     const socket = createConnection(SOCKET_PATH);
     socket.on("connect", () => {
-      socket.write(JSON.stringify({ jsonrpc: "2.0", method, params: { ...params, secret }, id: 1 }) + "\n");
+      socket.write(JSON.stringify({ jsonrpc: "2.0", method, params, id: 1 }) + "\n");
     });
     socket.on("data", () => { socket.destroy(); resolve(); });
     socket.on("error", reject);
