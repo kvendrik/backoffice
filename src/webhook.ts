@@ -19,7 +19,7 @@ const WEBHOOK_PORT   = parseInt(process.env["WEBHOOK_PORT"] ?? "3002");
 const REG_PATH       = "/data/webhooks/registrations.json";
 const SEEN_PATH      = "/tmp/webhooks/seen.json";
 const MAX_BODY_BYTES = 64 * 1024;
-const DEFAULT_REPLAY_TTL = 86_400;
+
 
 const SECURE_HEADERS = {
   "Cache-Control":          "no-store",
@@ -102,10 +102,10 @@ async function handleRequest(req: Request): Promise<Response> {
 
   if (url.pathname === "/health") return new Response("ok", { status: 200 });
 
-  const match = url.pathname.match(/^\/webhook\/([a-f0-9]{64})$/);
+  const match = /^\/webhook\/([a-f0-9]{64})$/.exec(url.pathname);
   if (!match) return new Response("Not found", { status: 404, headers: SECURE_HEADERS });
 
-  const id  = match[1]!;
+  const id  = match[1] ?? "";
   const reg = readRegistrations()[id];
   if (!reg) return new Response("Not found", { status: 404, headers: SECURE_HEADERS });
 
@@ -127,13 +127,15 @@ async function handleRequest(req: Request): Promise<Response> {
     return new Response("Unauthorized", { status: 401, headers: SECURE_HEADERS });
   }
 
-  // Replay detection
-  const seen = pruneSeen(readSeen(), reg.replayTtl ?? DEFAULT_REPLAY_TTL);
-  if (seen[sig!] !== undefined) {
+  // Replay detection (sig is non-null here — verifyHmac returned true)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const sigKey = sig!;
+  const seen = pruneSeen(readSeen(), reg.replayTtl);
+  if (seen[sigKey] !== undefined) {
     console.warn(`[webhook] Replay detected — endpoint ${id.slice(0, 8)}`);
     return new Response("Conflict", { status: 409, headers: SECURE_HEADERS });
   }
-  seen[sig!] = Date.now();
+  seen[sigKey] = Date.now();
   writeSeen(seen);
 
   // Build stdin payload and fire handler
@@ -142,11 +144,13 @@ async function handleRequest(req: Request): Promise<Response> {
   const payload = JSON.stringify({ method: req.method, headers: headersObj, body: bodyBuf.toString("utf8") });
 
   const proc = Bun.spawn(["sh", "-c", reg.cmd], { stdin: "pipe", stdout: "pipe", stderr: "pipe" });
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   proc.stdin.write(payload);
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   proc.stdin.end();
-  proc.exited.then((code) => {
+  void proc.exited.then((code) => {
     if (code !== 0) console.error(`[webhook] Handler for ${id.slice(0, 8)} exited ${String(code)}`);
-  }).catch(() => {});
+  }).catch(() => { /* ignore */ });
 
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
