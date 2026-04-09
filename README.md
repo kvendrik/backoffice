@@ -13,7 +13,13 @@ AI assistants like Claude and ChatGPT can use MCPs to access external services, 
 
 This is what Backoffice aims to solve. It gives Claude, ChatGPT, or any other AI assistant app, a remote Linux machine so that it has a command line it can use with minimal restrictions.
 
-> A simple example of something Backoffice has been useful for is [Strava](https://github.com/kvendrik/strava) access. Strava has no official MCP but I have a CLI for it that I use all the time. Instead of going to a 3rd party MCP provider I just use Backoffice within Claude and tell it to install and use the Strava CLI within Backoffice.
+## How I use it
+
+I use Backoffice for things like working with [Strava](https://github.com/kvendrik/strava), managing [Google Tasks](https://github.com/steipete/gogcli), [summarizing video content](https://github.com/danielmiessler/fabric), and coding on projects when I’m on the go.
+
+These are all things the Claude app can’t do natively, would struggle with (because there’s no persistent state), or could only do if I leave my laptop on (through Cowork).
+
+I could use a personal assistant like [OpenClaw](https://openclaw.ai/) or my own [Greg](https://github.com/kvendrik/greg) instead of Backoffice, but I much prefer the Claude app to Telegram or Slack for AI work. Claude also improves quickly, and when I built [Greg](https://github.com/kvendrik/greg) most of the work felt like replicating what Claude could already do. Backoffice takes a different approach: instead of rebuilding what Claude can already do, I add only what it can’t do.
 
 ## Quick Start
 
@@ -76,15 +82,15 @@ The OAuth consent screen requires a passphrase before issuing tokens. A passphra
 
 ### Environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `AUTH_PASSPHRASE` | *(random, logged on startup)* | Passphrase required on the OAuth consent screen. Set this to a strong secret so it never appears in logs. |
-| `ALLOWED_REDIRECT_URI_DOMAINS` | `claude.ai` | Comma-separated list of domains that OAuth clients are allowed to register redirect URIs for. Registrations with a `redirect_uri` on a domain not in this list are rejected. Set to `claude.ai,localhost` to also allow local clients. |
-| `OAUTH_RESET_ON_RESTART` | `false` | Set to `1` to disable OAuth state persistence. Existing tokens are lost on restart and clients re-authenticate automatically. |
-| `USE_MCP_TOKEN_AUTH` | `false` | Set to `1` to replace OAuth with a single static bearer token. Simpler, but no per-client visibility in logs. The token is read from `MCP_TOKEN` or auto-generated and written to `.mcp-token`. |
-| `MCP_TOKEN` | *(auto-generated)* | Static bearer token. Only used when `USE_MCP_TOKEN_AUTH=1`. |
-| `PUBLIC_BASE_URL` | *(derived from `RAILWAY_PUBLIC_DOMAIN`)* | Public origin of the server (e.g. `https://your-app.up.railway.app`). Required on non-Railway hosts. |
-| `PORT` | `3000` | Port the server listens on. |
+| Variable                       | Default                                  | Description                                                                                                                                                                                                                            |
+| ------------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_PASSPHRASE`              | _(random, logged on startup)_            | Passphrase required on the OAuth consent screen. Set this to a strong secret so it never appears in logs.                                                                                                                              |
+| `ALLOWED_REDIRECT_URI_DOMAINS` | `claude.ai`                              | Comma-separated list of domains that OAuth clients are allowed to register redirect URIs for. Registrations with a `redirect_uri` on a domain not in this list are rejected. Set to `claude.ai,localhost` to also allow local clients. |
+| `OAUTH_RESET_ON_RESTART`       | `false`                                  | Set to `1` to disable OAuth state persistence. Existing tokens are lost on restart and clients re-authenticate automatically.                                                                                                          |
+| `USE_MCP_TOKEN_AUTH`           | `false`                                  | Set to `1` to replace OAuth with a single static bearer token. Simpler, but no per-client visibility in logs. The token is read from `MCP_TOKEN` or auto-generated and written to `.mcp-token`.                                        |
+| `MCP_TOKEN`                    | _(auto-generated)_                       | Static bearer token. Only used when `USE_MCP_TOKEN_AUTH=1`.                                                                                                                                                                            |
+| `PUBLIC_BASE_URL`              | _(derived from `RAILWAY_PUBLIC_DOMAIN`)_ | Public origin of the server (e.g. `https://your-app.up.railway.app`). Required on non-Railway hosts.                                                                                                                                   |
+| `PORT`                         | `3000`                                   | Port the server listens on.                                                                                                                                                                                                            |
 
 ## Tools
 
