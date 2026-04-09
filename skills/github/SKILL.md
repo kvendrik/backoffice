@@ -172,3 +172,18 @@ SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/gh api \
   --field body='Your reply here' \
   --jq '.html_url'
 ```
+
+---
+
+## Comment Format
+
+Always post comments in this format — Backoffice posts as the owner's account so attribution matters:
+
+```
+Backoffice:
+> Your message here
+```
+
+## PII in Source Code
+
+Never include personally identifiable information (names, emails, usernames, domains, etc.) in source code, commits, or PR descriptions without explicitly asking the user first and getting approval. The repo is public.
