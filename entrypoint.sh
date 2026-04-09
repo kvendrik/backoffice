@@ -13,4 +13,13 @@ set -e
 
 mkdir -p /data /tmp
 chown -R appuser:appuser /data
+
+# Clone the source repo to /data/source on first deploy so skills and
+# other source-bundled assets are available at runtime. Subsequent deploys
+# leave /data/source untouched — local edits and unpushed work are preserved.
+if [ ! -d "/data/source/.git" ]; then
+  git clone https://github.com/kvendrik/backoffice.git /data/source
+  chown -R appuser:appuser /data/source
+fi
+
 exec gosu appuser bun run start

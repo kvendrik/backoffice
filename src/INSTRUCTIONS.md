@@ -72,3 +72,13 @@ Organise `memory_write` content with these sections:
 | `brew install` packages | Yes — installed to `/data/homebrew` |
 | Files outside `/data` | No |
 | Everything else | No |
+
+## Skills
+
+Skills are reusable task guides bundled with Backoffice. At the start of every conversation, run:
+
+    bun /data/source/skills/scan.ts
+
+This scans both `/data/source/skills/` (bundled defaults) and `/data/skills/` (user overrides). If both locations have a skill with the same name, `/data/skills/` wins. Read the relevant SKILL.md before starting any task it covers.
+
+To add or edit a skill: create or modify a folder under `/data/source/skills/` (git-tracked) or `/data/skills/` (volume-only, private).
