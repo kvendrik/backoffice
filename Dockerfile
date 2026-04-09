@@ -19,6 +19,7 @@ FROM base
 COPY --from=install /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src
+COPY bin ./bin
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
