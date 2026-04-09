@@ -131,7 +131,7 @@ Backoffice [ships](/skills) with a bunch of [`AgentSkills`](https://agentskills.
 | --- | --- |
 | `llm` | Delegate long-running agentic tasks to run in the background |
 | `auto-research` | Autonomous iterative research loops |
-| `cron` | Schedule recurring tasks via `/data/cron.json` |
+| `cron` | Schedule recurring tasks |
 | `plan-mode` | Iterate on a planning doc before shipping code via PR |
 | `fabric` | Summarize, analyze, or transform content using [Fabric](https://github.com/danielmiessler/fabric) prompt patterns |
 | `git` / `github` | Commits, branches, PRs via the GitHub CLI |
