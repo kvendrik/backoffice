@@ -100,6 +100,7 @@ interface SessionEntry {
 
 const oauthSessions = new Map<string, SessionEntry>();
 const tokenSessions = new Map<string, SessionEntry>();
+const localSessions = new Map<string, SessionEntry>();
 
 function bodyHasInitialize(body: unknown): boolean {
   if (body === undefined || body === null) {
@@ -212,7 +213,7 @@ startRpcServer();
 Bun.serve({
   port: listenPort,
   hostname: "0.0.0.0",
-  async fetch(req) {
+  async fetch(req, server) {
     const url = new URL(req.url);
 
     if (url.pathname === "/version") {
@@ -229,6 +230,11 @@ Bun.serve({
     if (url.pathname === "/mcp") {
       if (req.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: mcpCorsHeaders });
+      }
+      const clientIp = server.requestIP(req)?.address ?? "";
+      const isLocal = clientIp === "127.0.0.1" || clientIp === "::1" || clientIp === "::ffff:127.0.0.1";
+      if (isLocal) {
+        return handleMcpSession(req, localSessions);
       }
       if (USE_MCP_TOKEN_AUTH) {
         return handleMcpWithStaticToken(req);

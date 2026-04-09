@@ -4,10 +4,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod";
 import { getAll as getPersistedEnv } from "./env";
 
-const DEFAULT_TIMEOUT_MS = 30_000;
-const DEFAULT_MAX_OUTPUT_BYTES = 1_048_576; // 1 MB
+export const DEFAULT_TIMEOUT_MS = 30_000;
+export const DEFAULT_MAX_OUTPUT_BYTES = 1_048_576; // 1 MB
 
-interface Session {
+export interface Session {
   cwd: string;
   env: Record<string, string>;
 }
@@ -15,7 +15,7 @@ interface Session {
 const JOBS_FILE = "/.background-jobs";
 const JOBS_FILE_FALLBACK = "/tmp/.background-jobs";
 
-interface BackgroundJob {
+export interface BackgroundJob {
   id: number;
   pid: number;
   command: string;
@@ -35,7 +35,7 @@ function isValidJob(j: unknown): j is BackgroundJob {
   );
 }
 
-function readJobs(): BackgroundJob[] {
+export function readJobs(): BackgroundJob[] {
   for (const path of [JOBS_FILE, JOBS_FILE_FALLBACK]) {
     try {
       const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
@@ -47,7 +47,7 @@ function readJobs(): BackgroundJob[] {
   return [];
 }
 
-function writeJobs(jobs: BackgroundJob[]): void {
+export function writeJobs(jobs: BackgroundJob[]): void {
   try {
     writeFileSync(JOBS_FILE, JSON.stringify(jobs, null, 2));
   } catch {
@@ -56,7 +56,7 @@ function writeJobs(jobs: BackgroundJob[]): void {
   }
 }
 
-function isAlive(pid: number): boolean {
+export function isAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
@@ -223,7 +223,7 @@ function cappedCollector(maxBytes: number) {
   return { append, value };
 }
 
-function runBackground(command: string, session: Session): number {
+export function runBackground(command: string, session: Session): number {
   const child = spawn("bash", ["-c", command], {
     stdio: "ignore",
     cwd: session.cwd,

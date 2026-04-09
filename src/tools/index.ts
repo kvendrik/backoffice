@@ -58,27 +58,31 @@ function applyLogging(server: McpServer): void {
 
       const callId = nanoid();
 
-      fs.appendFileSync(
-        LOG_FILE,
-        JSON.stringify({
-          callId,
-          type: "tool_call",
-          timestamp: new Date().toISOString(),
-          call: ctx,
-        }) + "\n",
-      );
+      try {
+        fs.appendFileSync(
+          LOG_FILE,
+          JSON.stringify({
+            callId,
+            type: "tool_call",
+            timestamp: new Date().toISOString(),
+            call: ctx,
+          }) + "\n",
+        );
+      } catch { /* best-effort */ }
 
       const result: CallToolResult = (await cb(args, extra)) as CallToolResult;
 
-      fs.appendFileSync(
-        LOG_FILE,
-        JSON.stringify({
-          callId,
-          type: "tool_result",
-          timestamp: new Date().toISOString(),
-          result,
-        }) + "\n",
-      );
+      try {
+        fs.appendFileSync(
+          LOG_FILE,
+          JSON.stringify({
+            callId,
+            type: "tool_result",
+            timestamp: new Date().toISOString(),
+            result,
+          }) + "\n",
+        );
+      } catch { /* best-effort */ }
 
       return result;
     });
