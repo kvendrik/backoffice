@@ -183,3 +183,7 @@ Always post comments in this format — Backoffice posts as the owner's account 
 Backoffice:
 > Your message here
 ```
+
+## PII in Source Code
+
+Never include personally identifiable information (names, emails, usernames, domains, etc.) in source code, commits, or PR descriptions without explicitly asking the user first and getting approval. The repo is public.
