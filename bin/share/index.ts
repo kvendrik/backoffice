@@ -21,7 +21,7 @@ import {
   formatTimeRemaining,
   STORE_PATH,
   type TokenEntry,
-} from "../src/sharing/store.js";
+} from "./store.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
