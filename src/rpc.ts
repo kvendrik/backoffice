@@ -20,7 +20,7 @@ import { existsSync, unlinkSync } from "node:fs";
 
 export const SOCKET_PATH = "/tmp/backoffice.sock";
 
-const ALLOWED_PATTERNS = ["/share", "/webhook"];
+const ALLOWED_PATTERNS = ["/share"];
 const LOCALHOST_TARGET = /^http:\/\/(?:localhost|127\.0\.0\.1):\d+$/;
 
 /** pattern (e.g. "/share") → target base URL (e.g. "http://localhost:3001") */
