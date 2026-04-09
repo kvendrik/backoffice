@@ -1,3 +1,8 @@
+---
+name: self-modify
+description: Make changes to Backoffice itself — adding tools, changing behaviour, fixing bugs, updating instructions, or modifying source code.
+---
+
 # Self-Modification Skill
 
 Use this skill when asked to make changes to Backoffice itself — adding tools, changing behaviour, fixing bugs, updating instructions, etc.

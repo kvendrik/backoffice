@@ -1,3 +1,8 @@
+---
+name: fabric
+description: Summarise, analyse, extract insights from, or transform content (articles, YouTube videos, transcripts, essays, code) using Fabric prompt patterns.
+---
+
 # Fabric Skill
 
 Use this skill whenever the user asks you to summarise, analyse, extract insights from, or transform any content — articles, YouTube videos, transcripts, essays, code, etc.

@@ -1,11 +1,6 @@
 ---
 name: cron
-description: >
-  Schedule recurring commands using a Bun-native cron scheduler.
-  Use when the user wants to run something on a schedule (e.g. "remind me every
-  morning", "check for new comments every 30 minutes", "run my FTP trend script
-  daily"). Manages /data/cron.json which is read every 60s, so edits are
-  picked up without restart.
+description: Schedule recurring commands using a Bun-native cron scheduler. Use when the user wants to run something on a schedule (e.g. reminders, periodic checks, daily scripts). Manages /data/cron.json, picked up every 60s without restart.
 ---
 
 # Cron Skill
