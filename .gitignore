@@ -36,3 +36,4 @@ coverage/
 # Optional local tooling
 .vercel
 .netlify
+skills/watch-comments/state/*.json
