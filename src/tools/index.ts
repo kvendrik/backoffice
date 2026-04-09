@@ -20,6 +20,11 @@ export function create(server: McpServer): void {
 
 const LOG_FILE = path.join("/data", "log.jsonl");
 
+function ensureLogFile(): void {
+  fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+  if (!fs.existsSync(LOG_FILE)) fs.writeFileSync(LOG_FILE, "");
+}
+
 interface ToolCallContext {
   toolName: string;
   args: Record<string, unknown>;
@@ -58,31 +63,28 @@ function applyLogging(server: McpServer): void {
 
       const callId = nanoid();
 
-      try {
-        fs.appendFileSync(
-          LOG_FILE,
-          JSON.stringify({
-            callId,
-            type: "tool_call",
-            timestamp: new Date().toISOString(),
-            call: ctx,
-          }) + "\n",
-        );
-      } catch { /* best-effort */ }
+      ensureLogFile();
+      fs.appendFileSync(
+        LOG_FILE,
+        JSON.stringify({
+          callId,
+          type: "tool_call",
+          timestamp: new Date().toISOString(),
+          call: ctx,
+        }) + "\n",
+      );
 
       const result: CallToolResult = (await cb(args, extra)) as CallToolResult;
 
-      try {
-        fs.appendFileSync(
-          LOG_FILE,
-          JSON.stringify({
-            callId,
-            type: "tool_result",
-            timestamp: new Date().toISOString(),
-            result,
-          }) + "\n",
-        );
-      } catch { /* best-effort */ }
+      fs.appendFileSync(
+        LOG_FILE,
+        JSON.stringify({
+          callId,
+          type: "tool_result",
+          timestamp: new Date().toISOString(),
+          result,
+        }) + "\n",
+      );
 
       return result;
     });
