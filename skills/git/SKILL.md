@@ -20,6 +20,23 @@ Use this skill for any git operations across the two repos.
 - Always set `GIT_SSL_CAINFO=/data/cacert.pem` for any git network operation (push, pull, fetch, clone)
 - Git user already configured in `/data/source` — for `/data` may need: `git config user.email "$(git -C /data/source config user.email)"`
 
+### If `/data/cacert.pem` is missing
+
+Check first:
+```bash
+ls /data/cacert.pem
+```
+
+If absent, download the Mozilla CA bundle (no SSL verification needed for this bootstrap step — it's a well-known public URL):
+```bash
+curl -k -o /data/cacert.pem https://curl.se/ca/cacert.pem
+```
+
+Verify it worked:
+```bash
+GIT_SSL_CAINFO=/data/cacert.pem git ls-remote https://github.com/kvendrik/backoffice.git HEAD
+```
+
 ## Common Workflows
 
 ### Committing and pushing volume changes

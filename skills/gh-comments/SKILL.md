@@ -15,6 +15,14 @@ so the same comment is never reported twice.
 
 ---
 
+## Prerequisites
+
+- **`/data/bins/gh`** — GitHub CLI must be installed. If missing, see the github skill for install instructions.
+- **`/data/cacert.pem`** — CA bundle for SSL. If missing, see the git skill for the bootstrap command.
+- **`GITHUB_TOKEN`** — Personal access token. If missing, see the github skill Auth section.
+
+---
+
 ## Usage
 
 ```bash

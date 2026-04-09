@@ -11,14 +11,24 @@ Use this skill whenever you need to interact with GitHub — creating PRs, check
 
 ## Installation
 
-`gh` is a binary installed to `/data/bins/gh` so it persists across restarts.
+`gh` and `jq` are binaries installed to `/data/bins/` so they persist across restarts.
 
 ### Check if installed
 ```bash
 ls /data/bins/gh && /data/bins/gh --version
+ls /data/bins/jq && /data/bins/jq --version
 ```
 
-### Install / restore after restart
+### Install / restore jq first (required by gh install)
+```bash
+mkdir -p /data/bins
+JQ_VERSION="1.7.1"
+curl -kL -o /data/bins/jq "https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-linux-amd64"
+chmod +x /data/bins/jq
+/data/bins/jq --version  # verify
+```
+
+### Install / restore gh (requires jq)
 ```bash
 GH_VERSION=$(curl -ksSL https://api.github.com/repos/cli/cli/releases/latest | /data/bins/jq -r '.tag_name' | sed 's/^v//')
 curl -kL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" | tar xz -C /tmp
@@ -30,6 +40,21 @@ chmod +x /data/bins/gh
 ---
 
 ## Auth
+
+`GITHUB_TOKEN` is a GitHub personal access token stored as an env var.
+
+### If `GITHUB_TOKEN` is not set
+1. Create a token at https://github.com/settings/tokens with `repo` scope
+2. Persist it:
+```bash
+env_set GITHUB_TOKEN <your-token>
+```
+3. Verify:
+```bash
+SSL_CERT_FILE=/data/cacert.pem GH_TOKEN="$GITHUB_TOKEN" /data/bins/gh api user --jq '.login'
+```
+
+> If `cacert.pem` is also missing, see the git skill for the bootstrap command.
 
 Auth uses the `GITHUB_TOKEN` env var (persisted via `env_set`). Pass it explicitly on every call:
 
