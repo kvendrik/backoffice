@@ -13,13 +13,15 @@
 
 import { Cron } from "croner";
 import { existsSync, readFileSync } from "node:fs";
+import { spawnTracked } from "./process-tracker.js";
 
-const SCHEDULE_PATH = "/data/cron.json";
+const SCHEDULE_PATH  = "/data/cron.json";
 const RELOAD_INTERVAL = 60_000;
+const JOB_TIMEOUT_MS  = 5 * 60_000;  // 5 minutes — override per-job in future
 
 interface CronJobDef {
   schedule: string;
-  command: string;
+  command:  string;
 }
 
 let activeJobs: Cron[] = [];
@@ -51,16 +53,9 @@ function fingerprint(defs: CronJobDef[]): string {
   return JSON.stringify(defs);
 }
 
-function runCommand(command: string): Promise<void> {
-  console.log(`[cron] Running: ${command}`);
-  const proc = Bun.spawn(["sh", "-c", command], {
-    stdout: "inherit",
-    stderr: "inherit",
-    env: { ...process.env },
-  });
-  return proc.exited.then((code) => {
-    if (code !== 0) console.error(`[cron] Exit ${String(code)}: ${command}`);
-  });
+/** Derive a stable, filesystem-safe log key from a cron command. */
+function cronKey(command: string): string {
+  return "cron/" + command.trim().replace(/[^\w-]/g, "_").slice(0, 64);
 }
 
 function syncJobs(defs: CronJobDef[]) {
@@ -71,7 +66,10 @@ function syncJobs(defs: CronJobDef[]) {
     try {
       const job = new Cron(def.schedule, { protect: true }, async () => {
         try {
-          await runCommand(def.command);
+          await spawnTracked(def.command, {
+            key:       cronKey(def.command),
+            timeoutMs: JOB_TIMEOUT_MS,
+          });
         } catch (e) {
           console.error(`[cron] Error running "${def.command}":`, e);
         }
