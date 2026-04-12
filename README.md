@@ -15,7 +15,7 @@ This is what Backoffice aims to solve. It gives Claude, ChatGPT, or any other AI
 
 ## How I use it
 
-I use Backoffice for things like working with [Strava](https://github.com/kvendrik/strava), managing [Google Tasks](https://github.com/steipete/gogcli), [summarizing video content](https://github.com/danielmiessler/fabric), and coding on projects when I’m on the go.
+I use Backoffice for things like working with [Strava](https://github.com/kvendrik/strava), managing [Google Tasks](https://github.com/steipete/gogcli), [summarizing video content](https://github.com/danielmiessler/fabric), coding on projects when I’m on the go, and [making restaurant reservations](https://github.com/kvendrik/zenchef).
 
 These are all things the Claude app can’t do natively, would struggle with (because there’s no persistent state), or could only do if I leave my laptop on (through Cowork).
 
